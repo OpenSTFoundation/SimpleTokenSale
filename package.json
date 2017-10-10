@@ -1,0 +1,20 @@
+{
+  "name": "tools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "compile_contract.js",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "jsonfile": "^4.0.0",
+    "moment": "^2.18.1",
+    "solc": "^0.4.17",
+    "vorpal": "^1.12.0",
+    "web3": "^0.20.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
