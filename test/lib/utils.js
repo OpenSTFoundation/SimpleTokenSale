@@ -48,11 +48,32 @@ module.exports.deployTrustee = async (artifacts, accounts) => {
    }
 }
 
+module.exports.deployLockBox = async (artifacts, accounts) => {
+   var FutureTokenSaleLockBoxMock = artifacts.require("./FutureTokenSaleLockBoxMock.sol")
+
+   const token   = await SimpleToken.new()
+   const trustee = await Trustee.new(token.address, { from: accounts[0], gas: 3500000 })
+   const sale    = await TokenSale.new(token.address, trustee.address, accounts[0], { from: accounts[0], gas: 4500000 })
+   const lockBox = await FutureTokenSaleLockBoxMock.new(token.address, sale.address, Moment().unix(), { from: accounts[0], gas: 3500000 })
+
+   const TOKENS_FUTURE = await sale.TOKENS_FUTURE.call()
+
+   await token.transfer(lockBox.address, TOKENS_FUTURE, { from: accounts[0] })
+
+   return {
+      token   : token,
+      lockBox   : lockBox
+   }
+}
+
 
 module.exports.changeTime = async (sale, newTime) => {
    await sale.changeTime(newTime)
 };
 
+module.exports.changeTimeLockBox = async (lockBox, newTime) => {
+   await lockBox.changeTime(newTime)
+};
 
 module.exports.expectNoEvents = (result) => {
    assert.equal(result.receipt.logs.length, 0, "expected empty array of logs")
@@ -116,6 +137,35 @@ module.exports.checkTransferEvent = (event, _from, _to, _value) => {
    assert.equal(event.args._from, _from)
    assert.equal(event.args._to, _to)
    assert.equal(event.args._value.toNumber(), _value.toNumber())
+}
+
+
+module.exports.checkTokensTransferredEventGroup = (result, _to, _value) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   if (Number.isInteger(_value)) {
+      _value = new BigNumber(_value)
+   }
+
+   assert.equal(event.event, "TokensTransferred")
+   assert.equal(event.args._to, _to)
+   assert.equal(event.args._value.toNumber(), _value.toNumber())
+}
+
+
+module.exports.checkUnlockDateExtendedEventGroup = (result, _newDate) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   if (Number.isInteger(_newDate)) {
+      _newDate = new BigNumber(_newDate)
+   }
+
+   assert.equal(event.event, "UnlockDateExtended")
+   assert.equal(event.args._newDate.toNumber(), _newDate.toNumber())
 }
 
 

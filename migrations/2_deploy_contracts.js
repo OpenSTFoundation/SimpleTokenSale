@@ -1,9 +1,10 @@
 const BigNumber = require('bignumber.js')
 
-var ERC20Token  = artifacts.require("./ERC20Token.sol")
-var SimpleToken = artifacts.require("./SimpleToken.sol")
-var Trustee     = artifacts.require("./Trustee.sol")
-var TokenSale   = artifacts.require("./TokenSale.sol")
+var ERC20Token               = artifacts.require("./ERC20Token.sol")
+var SimpleToken              = artifacts.require("./SimpleToken.sol")
+var Trustee                  = artifacts.require("./Trustee.sol")
+var TokenSale                = artifacts.require("./TokenSale.sol")
+var FutureTokenSaleLockBox   = artifacts.require("./FutureTokenSaleLockBox.sol")
 
 
 module.exports = function(deployer, network, accounts) {
@@ -26,6 +27,8 @@ module.exports = function(deployer, network, accounts) {
       return deployer.deploy(TokenSale, token.address, trustee.address, accounts[0], { from: accounts[0], gas: 4500000 })
    }).then(() => {
       return TokenSale.deployed().then(instance => { sale = instance })
+   }).then(() => {
+      return deployer.deploy(FutureTokenSaleLockBox, token.address, sale.address);
    }).then(() => {
       return token.setOpsAddress(sale.address)
    }).then(() => {
