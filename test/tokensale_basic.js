@@ -54,7 +54,7 @@ contract('TokenSale', function(accounts) {
    const PHASE2_START_TIME         = 1510747200 // 2017-11-15, 12:00:00 UTC
    const END_TIME                  = 1511265599 // 2017-11-21, 11:59:59 UTC
    const CONTRIBUTION_MIN          = web3.toWei(0.1, "ether")
-   const CONTRIBUTION_MAX          = web3.toWei("1000000", "ether")
+   const CONTRIBUTION_MAX          = web3.toWei("10000", "ether")
 
    const PHASE1_ACCOUNT_TOKENS_MAX = new BigNumber('18000').mul(DECIMALSFACTOR)
 
@@ -178,6 +178,7 @@ contract('TokenSale', function(accounts) {
       it("tokenContract", async () => {
          assert.equal(await sale.tokenContract.call(), token.address)
       })
+
       it("trusteeContract", async () => {
          assert.equal(await sale.trusteeContract.call(), trustee.address)
       })
@@ -205,7 +206,18 @@ contract('TokenSale', function(accounts) {
 
       it("owner token balance", async () => {
          const owner = await sale.owner.call()
+         assert.equal(owner, accounts[0])
          assert.equal((await token.balanceOf.call(owner)).toNumber(), TOKENS_FUTURE.toNumber())
+      })
+
+      it("adminAddress", async () => {
+         const adminAddress = await sale.adminAddress.call()
+         assert.equal(adminAddress, 0)
+      })
+
+      it("opsAddress", async () => {
+         const opsAddress = await sale.opsAddress.call()
+         assert.equal(opsAddress, 0)
       })
    })
 })

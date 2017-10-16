@@ -66,6 +66,10 @@ contract('TokenSale', function(accounts) {
 
    const TOKENS_PER_KETHER         = new BigNumber('1800000')
 
+   const owner  = accounts[0]
+   const admin  = accounts[1]
+   const ops    = accounts[2]
+   const revoke = accounts[3]
 
 
    describe('buyTokens function', async () => {
@@ -81,6 +85,9 @@ contract('TokenSale', function(accounts) {
          token     = contracts.token
          trustee   = contracts.trustee
          sale      = contracts.sale
+
+         await sale.setAdminAddress(admin)
+         await sale.setOpsAddress(ops)
       })
 
 
@@ -91,7 +98,7 @@ contract('TokenSale', function(accounts) {
          })
 
          it("call buyTokens as whitelisted account", async () => {
-            await sale.updateWhitelist(accounts[1], 1)
+            await sale.updateWhitelist(accounts[1], 1, { from: ops })
             await Utils.expectThrow(sale.buyTokens.call({ from: accounts[1], value: CONTRIBUTION_MIN }))
          })
       })
@@ -102,7 +109,7 @@ contract('TokenSale', function(accounts) {
          var wallet = null
 
          before(async() => {
-            await sale.setTokensPerKEther(TOKENS_PER_KETHER)
+            await sale.setTokensPerKEther(TOKENS_PER_KETHER, { from: admin })
             await Utils.changeTime(sale, PHASE1_START_TIME + 1)
 
             wallet = await sale.wallet.call()
@@ -122,7 +129,7 @@ contract('TokenSale', function(accounts) {
          })
 
          it("buy tokens as whitelisted account for phase 1", async () => {
-            await sale.updateWhitelist(accounts[1], 1)
+            await sale.updateWhitelist(accounts[1], 1, { from: ops })
 
             var cost = CONTRIBUTION_MIN
             var tokens = Utils.calculateTokensFromWei(TOKENS_PER_KETHER, cost)
@@ -136,7 +143,7 @@ contract('TokenSale', function(accounts) {
 
             assert.equal(await sale.buyTokens.call({ from: accounts[1], value: cost }), true)
             const result = await sale.buyTokens({ from: accounts[1], value: cost })
-            Utils.checkTokensPurchasedEventGroup(result, sale.address, accounts[1], cost, tokens)
+            Utils.checkTokensPurchasedEventGroup(result, sale.address, accounts[1], cost, tokens, false)
 
             const tokenBalance1After       = await token.balanceOf(accounts[1])
             const ethBalance1After         = await Utils.getBalance(accounts[1])
@@ -164,7 +171,7 @@ contract('TokenSale', function(accounts) {
             const cost = Utils.calculateCostFromTokens(TOKENS_PER_KETHER, tokens).trunc()
 
             assert.equal(await sale.buyTokens.call({ from: accounts[1], value: cost }), true)
-            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[1], value: cost }), sale.address, accounts[1], cost, tokens)
+            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[1], value: cost }), sale.address, accounts[1], cost, tokens, false)
 
             const tokenBalance1After       = await token.balanceOf(accounts[1])
             const ethBalance1After         = await Utils.getBalance(accounts[1])
@@ -197,7 +204,13 @@ contract('TokenSale', function(accounts) {
             trustee   = contracts.trustee
             sale      = contracts.sale
 
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+
             wallet    = await sale.wallet.call()
+
+            const tokens = await token.balanceOf(sale.address)
+            await sale.setTokensPerKEther(tokens, { from: admin })
 
             await Utils.changeTime(sale, PHASE2_START_TIME + 1)
          })
@@ -216,7 +229,7 @@ contract('TokenSale', function(accounts) {
          })
 
          it("buy tokens as whitelisted account", async () => {
-            await sale.updateWhitelist(accounts[5], 2)
+            await sale.updateWhitelist(accounts[5], 2, { from: ops })
             assert.equal(await sale.buyTokens.call({ from: accounts[5], value: CONTRIBUTION_MIN }), true)
             await sale.buyTokens.call({ from: accounts[5], value: CONTRIBUTION_MIN })
          })
@@ -226,13 +239,13 @@ contract('TokenSale', function(accounts) {
          })
 
          it("buy all tokens left for sale", async () => {
-            await sale.updateWhitelist(accounts[1], 1)
+            await sale.updateWhitelist(accounts[1], 1, { from: ops })
 
             const totalTokensSoldBefore = await sale.totalTokensSold.call()
             const tokens = TOKENS_SALE.sub(totalTokensSoldBefore)
-            const cost = Utils.calculateCostFromTokens(TOKENS_PER_KETHER, tokens).trunc()
-            const contribution = cost.add(new BigNumber(web3.toWei(0.01, "ether")))
-
+            const tokensPerKEther = await sale.tokensPerKEther.call()
+            const cost = Utils.calculateCostFromTokens(tokensPerKEther, tokens).trunc()
+            const contribution = cost.add(new BigNumber(web3.toWei(1, "ether")))
             const tokenBalance1Before      = await token.balanceOf(accounts[1])
             const ethBalance1Before        = await Utils.getBalance(accounts[1])
             const tokenBalanceSaleBefore   = await token.balanceOf(sale.address)
@@ -255,7 +268,7 @@ contract('TokenSale', function(accounts) {
 
             assert.equal(await sale.buyTokens.call({ from: accounts[1], value: contribution }), true)
             const result = await sale.buyTokens({ from: accounts[1], value: contribution })
-            Utils.checkTokensPurchasedEventGroup(result, sale.address, accounts[1], cost, tokens)
+            Utils.checkTokensPurchasedEventGroup(result, sale.address, accounts[1], cost, tokens, true)
 
             const tokenBalance1After       = await token.balanceOf(accounts[1])
             const ethBalance1After         = await Utils.getBalance(accounts[1])
@@ -270,7 +283,6 @@ contract('TokenSale', function(accounts) {
             assert.equal(tokenBalanceWalletAfter.sub(tokenBalanceWalletBefore).toNumber(), 0)
             assert.equal(ethBalanceWalletAfter.sub(ethBalanceWalletBefore).toNumber(), cost.toNumber())
          })
-
       })
 
 
@@ -306,6 +318,9 @@ contract('TokenSale', function(accounts) {
             trustee = contracts.trustee
             sale    = contracts.sale
 
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+
             await Utils.changeTime(sale, END_TIME + 1)
          })
 
@@ -325,8 +340,11 @@ contract('TokenSale', function(accounts) {
             trustee = contracts.trustee
             sale    = contracts.sale
 
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+
             await Utils.changeTime(sale, PHASE1_START_TIME + 1)
-            await sale.finalize()
+            await sale.finalize({ from: admin })
          })
 
          it("buy CONTRIBUTION_MIN more tokens", async () => {

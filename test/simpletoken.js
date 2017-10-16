@@ -12,39 +12,41 @@ const SimpleToken = artifacts.require("./SimpleToken.sol")
 //    symbol
 //    decimals
 //    totalSupply
+//    balances is private
+//    Constructor raised transfer event
 //
 // transfer before finalize
 //    transfer from owner to other
-//    transfer 0 tokens (fails)
-//    transfer > balance (fails)
-//    transfer = balance (ok)
-//    transfer 1 token (ok)
-//    transfer 10000 tokens (ok)
+//    transfer 0 tokens
+//    transfer > balance
+//    transfer = balance
+//    transfer 1 token
+//    transfer 10000 tokens
 //
 // transfer after finalize
-//    transfer 0 tokens (fails)
-//    transfer > balance (fails)
-//    transfer = balance (ok)
-//    transfer 1 token (ok)
-//    transfer 10000 tokens (ok)
+//    transfer 0 tokens
+//    transfer > balance
+//    transfer = balance
+//    transfer 1 token
+//    transfer 10000 tokens
 //
 // transferFrom
-//    transfer    0  from account 0 -> 1 with 0 allowance (fails)
-//    transfer 1000  from account 0 -> 1 without allowance (fails)
-//    transfer 1000  from account 0 -> 1 with 10 allowance (fails)
-//    transfer 1000  from account 0 -> 1 with 1000 allowance (ok)
-//    transfer 50+50 from account 0 -> 1 with 100 allowance (ok)
-//    transfer 1000  from account 0 -> 1 with 999 allowance (fails)
-//    transfer    1  from account 0 -> 1 with 0 allowance (fails)
+//    transfer    0  from account 0 -> 1 with 0 allowance
+//    transfer 1000  from account 0 -> 1 without allowance
+//    transfer 1000  from account 0 -> 1 with 10 allowance
+//    transfer 1000  from account 0 -> 1 with 1000 allowance
+//    transfer 50+50 from account 0 -> 1 with 100 allowance
+//    transfer 1000  from account 0 -> 1 with 999 allowance
+//    transfer    1  from account 0 -> 1 with 0 allowance
 //
 // transferFrom after finalize
-//    transfer    0  from account 0 -> 1 with 0 allowance (fails)
-//    transfer 1000  from account 0 -> 1 without allowance (fails)
-//    transfer 1000  from account 0 -> 1 with 10 allowance (fails)
-//    transfer 1000  from account 0 -> 1 with 1000 allowance (ok)
-//    transfer 50+50 from account 0 -> 1 with 100 allowance (ok)
-//    transfer 1000  from account 0 -> 1 with 999 allowance (fails)
-//    transfer    1  from account 0 -> 1 with 0 allowance (fails)
+//    transfer    0  from account 0 -> 1 with 0 allowance
+//    transfer 1000  from account 0 -> 1 without allowance
+//    transfer 1000  from account 0 -> 1 with 10 allowance
+//    transfer 1000  from account 0 -> 1 with 1000 allowance
+//    transfer 50+50 from account 0 -> 1 with 100 allowance
+//    transfer 1000  from account 0 -> 1 with 999 allowance
+//    transfer    1  from account 0 -> 1 with 0 allowance
 //
 // approve
 // balanceOf
@@ -55,6 +57,10 @@ const SimpleToken = artifacts.require("./SimpleToken.sol")
 //    check if balances is exposed publicly
 //
 // owner and operations
+//    - owner is set
+//    - admin is 0
+//    - operations is 0
+//    - set operations key
 //    - set operations key
 //    - finalize (owner + ops)
 //
@@ -73,6 +79,12 @@ contract('SimpleToken', (accounts) => {
    const DECIMALS       = 18
    const TOTAL_SUPPLY   = new BigNumber('800000000').mul(DECIMALSFACTOR)
 
+   const owner  = accounts[0]
+   const admin  = accounts[1]
+   const ops    = accounts[2]
+   const revoke = accounts[3]
+
+
    async function createToken() {
       return await SimpleToken.new()
    }
@@ -86,21 +98,32 @@ contract('SimpleToken', (accounts) => {
          token = await createToken()
       })
 
+
       it("name", async () => {
          assert.equal(await token.name.call(), NAME)
       })
+
       it("symbol", async () => {
          assert.equal(await token.symbol.call(), SYMBOL)
       })
+
       it("decimals", async () => {
          assert.equal(await token.decimals.call(), DECIMALS)
       })
+
       it("totalSupply", async () => {
          assert.equal((await token.totalSupply.call()).toNumber(), TOTAL_SUPPLY.toNumber())
       })
 
       it("balances is private", async () => {
          assert.isTrue(typeof(token.balances) == 'undefined')
+      })
+
+      it('Constructor raised transfer event', async () => {
+          const receipt = await web3.eth.getTransactionReceipt(token.transactionHash)
+          assert.equal(receipt.logs.length, 1)
+          const logs = Utils.decodeLogs(token.abi, [ receipt.logs[0] ])
+          Utils.checkTransferEvent(logs[0], 0, accounts[0], TOTAL_SUPPLY)
       })
    })
 
@@ -111,6 +134,9 @@ contract('SimpleToken', (accounts) => {
 
       before(async () => {
          token = await createToken()
+
+         await token.setOpsAddress(ops)
+         await token.setAdminAddress(admin)
       })
 
       it("transfer tokens from owner to other", async () => {
@@ -127,7 +153,7 @@ contract('SimpleToken', (accounts) => {
       })
 
       it("transfer 0 tokens", async () => {
-         await Utils.expectThrow(token.transfer.call(accounts[2], 0, { from: accounts[1] }))
+          await Utils.expectThrow(token.transfer.call(accounts[2], 0, { from: accounts[1] }))
       })
 
       it("transfer > balance", async () => {
@@ -160,7 +186,10 @@ contract('SimpleToken', (accounts) => {
       before(async () => {
          token = await createToken()
 
-         await token.finalize()
+         await token.setOpsAddress(ops)
+         await token.setAdminAddress(admin)
+
+         await token.finalize({ from: admin })
       })
 
       it("transfer tokens from owner to other", async () => {
@@ -168,14 +197,13 @@ contract('SimpleToken', (accounts) => {
       })
 
       it("transfer 0 tokens", async () => {
-         assert.equal(await token.transfer.call(accounts[2], 0, { from: accounts[1] }), false)
-         Utils.expectNoEvents(await token.transfer(accounts[2], 0, { from: accounts[1] }))
+         assert.equal(await token.transfer.call(accounts[2], 0, { from: accounts[1] }), true)
+         Utils.checkTransferEventGroup(await token.transfer(accounts[2], 0, { from: accounts[1] }), accounts[1], accounts[2], 0)
       })
 
       it("transfer > balance", async () => {
          const balance = await token.balanceOf.call(accounts[1])
-         assert.equal(await token.transfer.call(accounts[2], balance.add(1), { from: accounts[1] }), false)
-         Utils.expectNoEvents(await token.transfer(accounts[2], balance.add(1), { from: accounts[1] }))
+         await Utils.expectThrow(token.transfer.call(accounts[2], balance.add(1), { from: accounts[1] }))
       })
 
       it("transfer = balance", async () => {
@@ -215,48 +243,68 @@ contract('SimpleToken', (accounts) => {
       before(async () => {
          token = await createToken()
 
-         await token.transfer(accounts[1], 10000)
+         await token.setOpsAddress(ops)
+         await token.setAdminAddress(admin)
+
+         await token.transfer(accounts[4], 10000)
       })
 
 
       it("transfer 0 from account 1 -> 2 with 0 allowance", async () => {
-         assert.equal(await token.approve.call(accounts[2], 0, { from: accounts[1] }), true)
-         assert.equal(await token.allowance.call(accounts[1], accounts[2]), 0)
-         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 10, { from: accounts[2] }), false)
+         assert.equal(await token.approve.call(accounts[2], 0, { from: accounts[4] }), true)
+         assert.equal(await token.allowance.call(accounts[4], accounts[2]), 0)
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], accounts[2], 10, { from: accounts[2] }))
       })
 
       it("transfer 1000 from account 1 -> 2 without allowance", async () => {
-         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }), false)
-         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[2] }), false)
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], accounts[2], 1000, { from: accounts[4] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], accounts[2], 1000, { from: accounts[2] }))
       })
 
       it("transfer 1000 from account 1 -> 2 with 10 allowance", async () => {
-         assert.equal(await token.approve.call(accounts[2], 10, { from: accounts[1] }), true)
-         Utils.checkApprovalEventGroup(await token.approve(accounts[2], 10, { from: accounts[1] }), accounts[1], accounts[2], 10)
+         assert.equal(await token.approve.call(accounts[2], 10, { from: accounts[4] }), true)
+         Utils.checkApprovalEventGroup(await token.approve(accounts[2], 10, { from: accounts[4] }), accounts[4], accounts[2], 10)
 
-         assert.equal(await token.allowance.call(accounts[1], accounts[2], { from: accounts[1] }), 10)
+         assert.equal((await token.allowance.call(accounts[4], accounts[2], { from: accounts[4] })).toNumber(), 10)
 
-         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }), false)
-         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[2] }), false)
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], accounts[2], 1000, { from: accounts[4] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], accounts[2], 1000, { from: accounts[2] }))
       })
 
-      it("transfer 1000 from account 1 -> 2 with 1000 allowance", async () => {
+      it("transfer 1000 from account 1 -> 2 with 1000 allowance (as ops)", async () => {
          // We first need to bring approval to 0
-         assert.equal(await token.approve.call(accounts[2], 0, { from: accounts[1] }), true)
-         Utils.checkApprovalEventGroup(await token.approve(accounts[2], 0, { from: accounts[1] }), accounts[1], accounts[2], 0)
+         assert.equal(await token.approve.call(ops, 0, { from: accounts[4] }), true)
+         Utils.checkApprovalEventGroup(await token.approve(ops, 0, { from: accounts[4] }), accounts[4], ops, 0)
 
-         assert.equal(await token.allowance.call(accounts[1], accounts[2], { from: accounts[1] }), 0)
+         assert.equal(await token.allowance.call(accounts[4], ops, { from: accounts[4] }), 0)
 
-         assert.equal(await token.approve.call(accounts[2], 1000, { from: accounts[1] }), true)
-         Utils.checkApprovalEventGroup(await token.approve(accounts[2], 1000, { from: accounts[1] }), accounts[1], accounts[2], 1000)
+         assert.equal(await token.approve.call(ops, 1000, { from: accounts[4] }), true)
+         Utils.checkApprovalEventGroup(await token.approve(ops, 1000, { from: accounts[4] }), accounts[4], ops, 1000)
 
-         assert.equal(await token.allowance.call(accounts[1], accounts[2]), 1000, { from: accounts[1] })
+         assert.equal(await token.allowance.call(accounts[4], ops), 1000, { from: accounts[4] })
 
-         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }))
-         await Utils.expectThrow(token.transferFrom(accounts[1], accounts[2], 1000, { from: accounts[2] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], ops, 1000, { from: accounts[4] }))
+         assert.equal(await token.transferFrom.call(accounts[4], ops, 1000, { from: ops }), true)
+         await token.transferFrom(accounts[4], ops, 1000, { from: ops })
 
-         assert.equal((await token.balanceOf.call(accounts[1])).toNumber(), 10000)
-         assert.equal((await token.balanceOf.call(accounts[2])).toNumber(), 0)
+         assert.equal((await token.balanceOf.call(accounts[4])).toNumber(), 9000)
+         assert.equal((await token.balanceOf.call(ops)).toNumber(), 1000)
+      })
+
+      it("transfer 1000 from account 1 -> 2 with 1000 allowance (as admin)", async () => {
+         // We first need to bring approval to 0
+         assert.equal(await token.approve.call(admin, 0, { from: accounts[4] }), true)
+         Utils.checkApprovalEventGroup(await token.approve(admin, 0, { from: accounts[4] }), accounts[4], admin, 0)
+
+         assert.equal(await token.allowance.call(accounts[4], admin, { from: accounts[4] }), 0)
+
+         assert.equal(await token.approve.call(admin, 1000, { from: accounts[4] }), true)
+         Utils.checkApprovalEventGroup(await token.approve(admin, 1000, { from: accounts[4] }), accounts[4], admin, 1000)
+
+         assert.equal(await token.allowance.call(accounts[4], admin), 1000, { from: accounts[4] })
+
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], admin, 1000, { from: accounts[4] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[4], admin, 1000, { from: admin }))
       })
    })
 
@@ -268,44 +316,49 @@ contract('SimpleToken', (accounts) => {
       before(async () => {
          token = await createToken()
 
+         await token.setOpsAddress(ops)
+         await token.setAdminAddress(admin)
+
          await token.transfer(accounts[1], 10000)
 
-         token.finalize()
+         token.finalize({ from: admin })
       })
 
 
-      it("transfer 0 from account 1 -> 2 with 0", async () => {
+      it("transfer 0 from account 1 -> 2 with 0 allowance", async () => {
          assert.equal(await token.approve.call(accounts[2], 0, { from: accounts[1] }), true)
          assert.equal(await token.allowance.call(accounts[1], accounts[2]), 0)
-         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 0, { from: accounts[1] }), false)
-         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 0, { from: accounts[2] }), false)
+         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 0, { from: accounts[1] }), true)
+         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 0, { from: accounts[2] }), true)
       })
 
       it("transfer 1000 from account 1 -> 2 without allowance", async () => {
-         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }), false)
-         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[2] }), false)
+         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[2] }))
       })
 
       it("transfer 1000 from account 1 -> 2 with 10 allowance", async () => {
          assert.equal(await token.approve.call(accounts[2], 10, { from: accounts[1] }), true)
          await token.approve(accounts[2], 10, { from: accounts[1] })
          assert.equal(await token.allowance.call(accounts[1], accounts[2]), 10)
-         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }), false)
-         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[2] }), false)
+         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[2] }))
       })
 
       it("transfer 1000 from account 1 -> 2 with 1000 allowance", async () => {
          // We first need to bring approval to 0
          assert.equal(await token.approve.call(accounts[2], 0, { from: accounts[1] }), true)
          await token.approve(accounts[2], 0, { from: accounts[1] })
-
          assert.equal(await token.allowance.call(accounts[1], accounts[2]), 0)
+
          assert.equal(await token.approve.call(accounts[2], 1000, { from: accounts[1] }), true)
          await token.approve(accounts[2], 1000, { from: accounts[1] })
          assert.equal(await token.allowance.call(accounts[1], accounts[2]), 1000)
-         assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }), false)
+
+         await Utils.expectThrow(token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[1] }))
          assert.equal(await token.transferFrom.call(accounts[1], accounts[2], 1000, { from: accounts[2] }), true)
          await token.transferFrom(accounts[1], accounts[2], 1000, { from: accounts[2] })
+
          assert.equal((await token.balanceOf.call(accounts[1])).toNumber(), 9000)
          assert.equal((await token.balanceOf.call(accounts[2])).toNumber(), 1000)
       })
@@ -320,6 +373,9 @@ contract('SimpleToken', (accounts) => {
       before(async () => {
          token = await createToken()
 
+         await token.setOpsAddress(ops)
+         await token.setAdminAddress(admin)
+
          await token.transfer(accounts[1], 10000)
          await token.transfer(accounts[2], 1000)
       })
@@ -329,31 +385,39 @@ contract('SimpleToken', (accounts) => {
          assert.equal(await token.owner.call(), accounts[0])
       })
 
+      it("check initial admin", async () => {
+         assert.equal(await token.adminAddress.call(), accounts[1])
+      })
+
       it("check initial ops", async () => {
-         assert.equal(await token.operationsAddress.call(), 0)
+         assert.equal(await token.opsAddress.call(), accounts[2])
       })
 
       it("change ops address to some account", async () => {
-         assert.equal(await token.setOperationsAddress.call(accounts[5]), true)
-         await token.setOperationsAddress(accounts[5])
+         assert.equal(await token.setOpsAddress.call(accounts[5]), true)
+         await token.setOpsAddress(accounts[5])
       })
 
       it("change ops address to 0", async () => {
-         assert.equal(await token.setOperationsAddress.call(0), true)
-         await token.setOperationsAddress(0)
+         assert.equal(await token.setOpsAddress.call(0), true)
+         await token.setOpsAddress(0)
       })
 
-      it("change ops address to account 1", async () => {
-         assert.equal(await token.setOperationsAddress.call(accounts[1]), true)
-         await token.setOperationsAddress(accounts[1])
+      it("change ops address to account 3", async () => {
+         assert.equal(await token.setOpsAddress.call(accounts[3]), true)
+         await token.setOpsAddress(accounts[3])
       })
 
       it("finalize as normal", async () => {
-         await Utils.expectThrow(token.finalize.call({ from: accounts[2] }))
+         await Utils.expectThrow(token.finalize.call({ from: accounts[4] }))
       })
 
       it("finalize as ops", async () => {
-         await Utils.expectThrow(token.finalize.call({ from: accounts[1] }))
+         await Utils.expectThrow(token.finalize.call({ from: ops }))
+      })
+
+      it("finalize as admin", async () => {
+         assert.equal(await token.finalize.call({ from: admin }), true)
       })
    })
 
@@ -364,17 +428,20 @@ contract('SimpleToken', (accounts) => {
 
       before(async () => {
          token = await createToken()
+
+         await token.setOpsAddress(ops)
+         await token.setAdminAddress(admin)
       })
 
 
       it("check properties before and after finalize", async () => {
          assert.equal(await token.finalized.call(), false)
-         Utils.checkFinalizedEventGroup(await token.finalize())
+         Utils.checkFinalizedEventGroup(await token.finalize({ from: admin }))
          assert.equal(await token.finalized.call(), true)
       })
 
       it("try to finalize a 2nd time", async () => {
-         await Utils.expectThrow(token.finalize.call())
+         await Utils.expectThrow(token.finalize.call({ from: admin }))
       })
    })
 })

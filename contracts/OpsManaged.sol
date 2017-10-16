@@ -1,7 +1,7 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.17;
 
 // ----------------------------------------------------------------------------
-// Simple Token - Operations Privileges
+// Simple Token - Admin / Ops Permission Model
 //
 // Copyright (c) 2017 Simple Token and Enuma Technologies.
 // http://www.simpletoken.com/
@@ -10,54 +10,93 @@ pragma solidity ^0.4.15;
 // ----------------------------------------------------------------------------
 
 
-import "./OpenZepplin/Ownable.sol";
+import "./Owned.sol";
 
 
 //
-// Implements a simple 2 level access permission for owner and operations
+// Implements a more advanced ownership and permission model based on owner,
+// admin and ops per Simple Token key management specification.
 //
-contract OpsManaged is Ownable {
+contract OpsManaged is Owned {
 
-   address public operationsAddress;
+    address public opsAddress;
+    address public adminAddress;
 
-
-   // Events
-   event OperationsAddressChanged(address indexed _newAddress);
-
-
-   function OpsManaged()
-      Ownable()
-   {
-   }
+    event AdminAddressChanged(address indexed _newAddress);
+    event OpsAddressChanged(address indexed _newAddress);
 
 
-   // The owner is allowed to change the operations address.
-   // Can also be set to 0 to disable operations.
-   function setOperationsAddress(address _address) external onlyOwner returns (bool) {
-      require(_address != owner);
-
-      operationsAddress = _address;
-
-      OperationsAddressChanged(_address);
-
-      return true;
-   }
+    function OpsManaged() public
+        Owned()
+    {
+    }
 
 
-   modifier onlyOwnerOrOps() {
-      require(isOwnerOrOps(msg.sender) == true);
-      _;
-   }
+    modifier onlyAdmin() {
+        require(isAdmin(msg.sender));
+        _;
+    }
 
 
-   function isOps(address _address) public constant returns (bool) {
-      return (operationsAddress != address(0) && _address == operationsAddress);
-   }
+    modifier onlyAdminOrOps() {
+        require(isAdmin(msg.sender) || isOps(msg.sender));
+        _;
+    }
 
 
-   function isOwnerOrOps(address _address) public constant returns (bool) {
-      return (_address == owner || isOps(_address) == true);
-   }
+    modifier onlyOwnerOrAdmin() {
+        require(isOwner(msg.sender) || isAdmin(msg.sender));
+        _;
+    }
+
+
+    modifier onlyOps() {
+        require(isOps(msg.sender));
+        _;
+    }
+
+
+    function isAdmin(address _address) internal view returns (bool) {
+        return (adminAddress != address(0) && _address == adminAddress);
+    }
+
+
+    function isOps(address _address) internal view returns (bool) {
+        return (opsAddress != address(0) && _address == opsAddress);
+    }
+
+
+    function isOwnerOrOps(address _address) internal view returns (bool) {
+        return (isOwner(_address) || isOps(_address));
+    }
+
+
+    // Owner and Admin can change the admin address. Address can also be set to 0 to 'disable' it.
+    function setAdminAddress(address _adminAddress) external onlyOwnerOrAdmin returns (bool) {
+        require(_adminAddress != owner);
+        require(_adminAddress != address(this));
+        require(!isOps(_adminAddress));
+
+        adminAddress = _adminAddress;
+
+        AdminAddressChanged(_adminAddress);
+
+        return true;
+    }
+
+
+    // Owner and Admin can change the operations address. Address can also be set to 0 to 'disable' it.
+    function setOpsAddress(address _opsAddress) external onlyOwnerOrAdmin returns (bool) {
+        require(_opsAddress != owner);
+        require(_opsAddress != address(this));
+        require(!isAdmin(_opsAddress));
+
+        opsAddress = _opsAddress;
+
+        OpsAddressChanged(_opsAddress);
+
+        return true;
+    }
 }
 
 

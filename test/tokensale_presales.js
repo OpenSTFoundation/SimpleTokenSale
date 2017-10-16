@@ -31,6 +31,11 @@ contract('TokenSale', (accounts) => {
    const DECIMALSFACTOR = new BigNumber('10').pow('18')
    const TOKENS_SALE    = new BigNumber('240000000').mul(DECIMALSFACTOR)
 
+   const owner  = accounts[0]
+   const admin  = accounts[1]
+   const ops    = accounts[2]
+   const revoke = accounts[3]
+
 
    describe('Presale before sale starts', async () => {
 
@@ -44,27 +49,30 @@ contract('TokenSale', (accounts) => {
          token   = contracts.token
          trustee = contracts.trustee
          sale    = contracts.sale
+
+         await sale.setAdminAddress(admin)
+         await sale.setOpsAddress(ops)
       })
 
 
       it("Add presale of 0, 0", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[1], 0, 0))
+         await Utils.expectThrow(sale.addPresale(accounts[1], 0, 0, { from: admin }))
       })
 
       it("Add presale of 0, 1000", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[1], 0, 1000))
+         await Utils.expectThrow(sale.addPresale(accounts[1], 0, 1000, { from: admin }))
       })
 
       it("Add presale of TOKENS_SALE + 1, 0", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[1], TOKENS_SALE.add(1), 0))
+         await Utils.expectThrow(sale.addPresale(accounts[1], TOKENS_SALE.add(1), 0, { from: admin }))
       })
 
       it("Add presale of 1, TOKENS_SALE + 1", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[1], 1, TOKENS_SALE.add(1)))
+         await Utils.expectThrow(sale.addPresale(accounts[1], 1, TOKENS_SALE.add(1), { from: admin }))
       })
 
       it("Add presale of 1000, 1000", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[1], 1000, 1000))
+         await Utils.expectThrow(sale.addPresale(accounts[1], 1000, 1000, { from: admin }))
       })
 
       it("Add presale of 1000, 0", async () => {
@@ -74,8 +82,8 @@ contract('TokenSale', (accounts) => {
          assert.equal(baseBefore.toNumber(), 0)
          assert.equal(bonusBefore.toNumber(), 0)
 
-         assert.equal(await sale.addPresale.call(accounts[1], 1000, 0), true)
-         Utils.checkPresaleAddedEventGroup(await sale.addPresale(accounts[1], 1000, 0), accounts[1], 1000, 0)
+         assert.equal(await sale.addPresale.call(accounts[1], 1000, 0, { from: admin }), true)
+         Utils.checkPresaleAddedEventGroup(await sale.addPresale(accounts[1], 1000, 0, { from: admin }), accounts[1], 1000, 0)
 
          const baseAfter = await sale.totalPresaleBase.call()
          const bonusAfter = await sale.totalPresaleBonus.call()
@@ -85,12 +93,12 @@ contract('TokenSale', (accounts) => {
       })
 
       it("Add presale of 1000, 0 - Cant pre-sell to same person twice", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[1], 1000, 100))
+         await Utils.expectThrow(sale.addPresale(accounts[1], 1000, 100, { from: admin }))
       })
 
       it("Add presale of 1000, 100", async () => {
-         assert.equal(await sale.addPresale.call(accounts[2], 1000, 100), true)
-         Utils.checkPresaleAddedEventGroup(await sale.addPresale(accounts[2], 1000, 100), accounts[2], 1000, 100)
+         assert.equal(await sale.addPresale.call(accounts[2], 1000, 100, { from: admin }), true)
+         Utils.checkPresaleAddedEventGroup(await sale.addPresale(accounts[2], 1000, 100, { from: admin }), accounts[2], 1000, 100)
 
          // Check that allocation was made properly
          const totalTokensSold   = await sale.totalTokensSold.call()
@@ -108,12 +116,22 @@ contract('TokenSale', (accounts) => {
 
       it("Add presale of TOKENS_SALE - 2000, 100", async () => {
          const baseAmount = TOKENS_SALE.sub(2000)
-         assert.equal(await sale.addPresale.call(accounts[3], baseAmount, 100), true)
-         Utils.checkPresaleAddedEventGroup(await sale.addPresale(accounts[3], baseAmount, 100), accounts[3], baseAmount, 100)
+
+         assert.equal(await sale.finalized.call(), false)
+
+         assert.equal(await sale.addPresale.call(accounts[3], baseAmount, 100, { from: admin }), true)
+         Utils.checkPresaleAddedEventGroup(await sale.addPresale(accounts[3], baseAmount, 100, { from: admin }), accounts[3], baseAmount, 100)
+
+         assert.equal((await sale.totalTokensSold.call()).toNumber(), TOKENS_SALE.toNumber())
+         assert.equal(await sale.finalized.call(), false)
       })
 
       it("Add presale of 1, 0", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[4], 1, 0))
+         assert.equal(await sale.finalized.call(), false)
+         await Utils.expectThrow(sale.addPresale(accounts[4], 1, 0, { from: admin }))
+
+         // Add this if we decide to support auto-finalize on presales.
+         // assert.equal(await sale.finalized.call(), true)
       })
    })
 
@@ -131,29 +149,38 @@ contract('TokenSale', (accounts) => {
          trustee = contracts.trustee
          sale    = contracts.sale
 
+         await sale.setAdminAddress(admin)
+         await sale.setOpsAddress(ops)
+
          const PHASE2_START_TIME = await sale.PHASE2_START_TIME.call()
 
          await Utils.changeTime(sale, PHASE2_START_TIME.add(1))
       })
 
       it("Add presale of 1000, 100", async () => {
-         await Utils.expectThrow(sale.addPresale(accounts[1], 1000, 100))
+         await Utils.expectThrow(sale.addPresale(accounts[1], 1000, 100, { from: admin }))
       })
    })
 
 
    describe('Presale when finalized', async () => {
 
-      var contracts = null
+      var sale = null
+
 
       before(async () => {
-         contracts = await Utils.deployContracts(artifacts, accounts)
+         var contracts = await Utils.deployContracts(artifacts, accounts)
 
-         await contracts.sale.finalize()
+         sale = contracts.sale
+
+         await sale.setAdminAddress(admin)
+         await sale.setOpsAddress(ops)
+
+         await sale.finalize({ from: admin })
       })
 
       it("Add presale of 1000, 100", async () => {
-         await Utils.expectThrow(contracts.sale.addPresale(accounts[1], 1000, 100))
+         await Utils.expectThrow(sale.addPresale(accounts[1], 1000, 100, { from: admin }))
       })
    })
 })

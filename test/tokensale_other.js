@@ -65,6 +65,11 @@ contract('TokenSale', function(accounts) {
 
    const TOKENS_PER_KETHER         = new BigNumber('1800000')
 
+   const owner  = accounts[0]
+   const admin  = accounts[1]
+   const ops    = accounts[2]
+   const revoke = accounts[3]
+
 
    describe('whitelist', async () => {
 
@@ -80,35 +85,38 @@ contract('TokenSale', function(accounts) {
             token   = contracts.token
             trustee = contracts.trustee
             sale    = contracts.sale
+
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
          })
 
 
          it("add account to whitelist, phase 1", async () => {
             assert.equal(await sale.whitelist.call(accounts[2]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[2], 1), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[2], 1), accounts[2], 1)
+            assert.equal(await sale.updateWhitelist.call(accounts[2], 1, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[2], 1, { from: ops }), accounts[2], 1)
             assert.equal(await sale.whitelist.call(accounts[2]), 1)
          })
 
          it("add account to whitelist, phase 2", async () => {
             assert.equal(await sale.whitelist.call(accounts[3]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[3], 2), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[3], 2), accounts[3], 2)
+            assert.equal(await sale.updateWhitelist.call(accounts[3], 2, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[3], 2, { from: ops }), accounts[3], 2)
             assert.equal(await sale.whitelist.call(accounts[3]), 2)
          })
 
          it("add account to whitelist, phase 3", async () => {
-            assert.equal(await sale.whitelist.call(accounts[4]), 0)
-            await Utils.expectThrow(sale.updateWhitelist.call(accounts[4], 3))
+            assert.equal(await sale.whitelist.call(accounts[4], { from: ops }), 0)
+            await Utils.expectThrow(sale.updateWhitelist.call(accounts[4], 3, { from: ops }))
          })
 
          it("remove account from whitelist", async () => {
             assert.equal(await sale.whitelist.call(accounts[1]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[1], 1), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 1), accounts[1], 1)
+            assert.equal(await sale.updateWhitelist.call(accounts[1], 1, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 1, { from: ops }), accounts[1], 1)
             assert.equal(await sale.whitelist.call(accounts[1]), 1)
-            assert.equal(await sale.updateWhitelist.call(accounts[1], 0), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 0), accounts[1], 0)
+            assert.equal(await sale.updateWhitelist.call(accounts[1], 0, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 0, { from: ops }), accounts[1], 0)
             assert.equal(await sale.whitelist.call(accounts[1]), 0)
          })
 
@@ -144,36 +152,39 @@ contract('TokenSale', function(accounts) {
             trustee = contracts.trustee
             sale    = contracts.sale
 
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+
             await Utils.changeTime(sale, PHASE1_START_TIME + 1)
          })
 
 
          it("add account to whitelist, phase 1", async () => {
             assert.equal(await sale.whitelist.call(accounts[2]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[2], 1), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[2], 1), accounts[2], 1)
+            assert.equal(await sale.updateWhitelist.call(accounts[2], 1, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[2], 1, { from: ops }), accounts[2], 1)
             assert.equal(await sale.whitelist.call(accounts[2]), 1)
          })
 
          it("add account to whitelist, phase 2", async () => {
             assert.equal(await sale.whitelist.call(accounts[3]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[3], 2), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[3], 2), accounts[3], 2)
+            assert.equal(await sale.updateWhitelist.call(accounts[3], 2, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[3], 2, { from: ops }), accounts[3], 2)
             assert.equal(await sale.whitelist.call(accounts[3]), 2)
          })
 
          it("add account to whitelist, phase 3", async () => {
             assert.equal(await sale.whitelist.call(accounts[4]), 0)
-            await Utils.expectThrow(sale.updateWhitelist.call(accounts[4], 3))
+            await Utils.expectThrow(sale.updateWhitelist.call(accounts[4], 3, { from: ops }))
          })
 
          it("remove account from whitelist", async () => {
             assert.equal(await sale.whitelist.call(accounts[1]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[1], 1), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 1), accounts[1], 1)
+            assert.equal(await sale.updateWhitelist.call(accounts[1], 1, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 1, { from: ops }), accounts[1], 1)
             assert.equal(await sale.whitelist.call(accounts[1]), 1)
-            assert.equal(await sale.updateWhitelist.call(accounts[1], 0), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 0), accounts[1], 0)
+            assert.equal(await sale.updateWhitelist.call(accounts[1], 0, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 0, { from: ops }), accounts[1], 0)
             assert.equal(await sale.whitelist.call(accounts[1]), 0)
          })
 
@@ -190,7 +201,7 @@ contract('TokenSale', function(accounts) {
             var tokens = Utils.calculateTokensFromWei(TOKENS_PER_KETHER, cost)
 
             assert.equal(await sale.buyTokens.call({ from: accounts[2], value: cost }), true)
-            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[2], value: cost }), sale.address, accounts[2], cost, tokens)
+            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[2], value: cost }), sale.address, accounts[2], cost, tokens, false)
          })
 
          it("try to purchase tokens during phase 1 (whitelisted for phase 2)", async () => {
@@ -210,36 +221,39 @@ contract('TokenSale', function(accounts) {
             trustee = contracts.trustee
             sale    = contracts.sale
 
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+
             await Utils.changeTime(sale, PHASE2_START_TIME + 1)
          })
 
 
          it("add account to whitelist, phase 1", async () => {
             assert.equal(await sale.whitelist.call(accounts[2]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[2], 1), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[2], 1), accounts[2], 1)
+            assert.equal(await sale.updateWhitelist.call(accounts[2], 1, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[2], 1, { from: ops }), accounts[2], 1)
             assert.equal(await sale.whitelist.call(accounts[2]), 1)
          })
 
          it("add account to whitelist, phase 2", async () => {
             assert.equal(await sale.whitelist.call(accounts[3]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[3], 2), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[3], 2), accounts[3], 2)
+            assert.equal(await sale.updateWhitelist.call(accounts[3], 2, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[3], 2, { from: ops }), accounts[3], 2)
             assert.equal(await sale.whitelist.call(accounts[3]), 2)
          })
 
          it("add account to whitelist, phase 3", async () => {
             assert.equal(await sale.whitelist.call(accounts[4]), 0)
-            await Utils.expectThrow(sale.updateWhitelist.call(accounts[4], 3))
+            await Utils.expectThrow(sale.updateWhitelist.call(accounts[4], 3, { from: ops }))
          })
 
          it("remove account from whitelist", async () => {
             assert.equal(await sale.whitelist.call(accounts[1]), 0)
-            assert.equal(await sale.updateWhitelist.call(accounts[1], 1), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 1), accounts[1], 1)
+            assert.equal(await sale.updateWhitelist.call(accounts[1], 1, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 1, { from: ops }), accounts[1], 1)
             assert.equal(await sale.whitelist.call(accounts[1]), 1)
-            assert.equal(await sale.updateWhitelist.call(accounts[1], 0), true)
-            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 0), accounts[1], 0)
+            assert.equal(await sale.updateWhitelist.call(accounts[1], 0, { from: ops }), true)
+            Utils.checkWhitelistUpdatedEventGroup(await sale.updateWhitelist(accounts[1], 0, { from: ops }), accounts[1], 0)
             assert.equal(await sale.whitelist.call(accounts[1]), 0)
          })
 
@@ -256,7 +270,7 @@ contract('TokenSale', function(accounts) {
             var tokens = Utils.calculateTokensFromWei(TOKENS_PER_KETHER, cost)
 
             assert.equal(await sale.buyTokens.call({ from: accounts[2], value: cost }), true)
-            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[2], value: cost }), sale.address, accounts[2], cost, tokens)
+            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[2], value: cost }), sale.address, accounts[2], cost, tokens, false)
          })
 
          it("try to purchase tokens during phase 2 (whitelisted for phase 2)", async () => {
@@ -266,7 +280,7 @@ contract('TokenSale', function(accounts) {
             var tokens = Utils.calculateTokensFromWei(TOKENS_PER_KETHER, cost)
 
             assert.equal(await sale.buyTokens.call({ from: accounts[3], value: cost }), true)
-            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[3], value: cost }), sale.address, accounts[3], cost, tokens)
+            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[3], value: cost }), sale.address, accounts[3], cost, tokens, false)
          })
       })
    })
@@ -285,9 +299,12 @@ contract('TokenSale', function(accounts) {
          trustee = contracts.trustee
          sale    = contracts.sale
 
+         await sale.setAdminAddress(admin)
+         await sale.setOpsAddress(ops)
+
          // Whitelist accounts for purchase
-         await sale.updateWhitelist(accounts[2], 2)
-         await sale.updateWhitelist(accounts[3], 2)
+         await sale.updateWhitelist(accounts[2], 2, { from: ops })
+         await sale.updateWhitelist(accounts[3], 2, { from: ops })
 
          // Sale starts
          await Utils.changeTime(sale, PHASE2_START_TIME + 1)
@@ -295,13 +312,13 @@ contract('TokenSale', function(accounts) {
 
 
       it("change wallet to address 0", async () => {
-         await Utils.expectThrow(sale.changeWallet.call(0))
+         await Utils.expectThrow(sale.changeWallet.call(0, { from: admin }))
       })
 
       it("purchase tokens with wallet = account[1]", async () => {
          assert.equal(await sale.wallet.call(), accounts[0])
-         assert.equal(await sale.changeWallet.call(accounts[1]), true)
-         Utils.checkWalletChangedEventGroup(await sale.changeWallet(accounts[1]), accounts[1])
+         assert.equal(await sale.changeWallet.call(accounts[1], { from: admin }), true)
+         Utils.checkWalletChangedEventGroup(await sale.changeWallet(accounts[1], { from: admin }), accounts[1])
          assert.equal(await sale.wallet.call(), accounts[1])
 
          const balanceBefore = await Utils.getBalance(accounts[1])
@@ -312,7 +329,7 @@ contract('TokenSale', function(accounts) {
       })
 
       it("purchase tokens with wallet = account[2]", async () => {
-         Utils.checkWalletChangedEventGroup(await sale.changeWallet(accounts[2]), accounts[2])
+         Utils.checkWalletChangedEventGroup(await sale.changeWallet(accounts[2], { from: admin }), accounts[2])
 
          const balanceBefore = await Utils.getBalance(accounts[2])
          await sale.sendTransaction({ from: accounts[3], value: web3.toWei(0.1, "ether") })
@@ -335,6 +352,9 @@ contract('TokenSale', function(accounts) {
          token   = contracts.token
          trustee = contracts.trustee
          sale    = contracts.sale
+
+         await sale.setAdminAddress(admin)
+         await sale.setOpsAddress(ops)
       })
 
 
@@ -344,8 +364,8 @@ contract('TokenSale', function(accounts) {
       })
 
       it("finalize the sale contract", async () => {
-         assert.equal(await sale.finalize.call(), true)
-         Utils.checkFinalizedEventGroup(await sale.finalize())
+         assert.equal(await sale.finalize.call({ from: admin }), true)
+         Utils.checkFinalizedEventGroup(await sale.finalize({ from: admin }))
       })
 
       it("check properties after finalize", async () => {
@@ -354,7 +374,7 @@ contract('TokenSale', function(accounts) {
       })
 
       it("try to finalize a 2nd time", async () => {
-         await Utils.expectThrow(sale.finalize.call())
+         await Utils.expectThrow(sale.finalize.call({ from: admin }))
       })
    })
 
@@ -372,14 +392,17 @@ contract('TokenSale', function(accounts) {
             token   = contracts.token
             trustee = contracts.trustee
             sale    = contracts.sale
+
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
          })
 
          it("reclaimTokens before finalize", async () => {
             const balance0Before = await token.balanceOf(accounts[0])
             const balanceSaleBefore = await token.balanceOf(sale.address)
 
-            assert.equal(await sale.reclaimTokens.call(), true)
-            Utils.checkTokensReclaimedEventGroup(await sale.reclaimTokens(), balanceSaleBefore)
+            assert.equal(await sale.reclaimTokens.call({ from: admin }), true)
+            Utils.checkTokensReclaimedEventGroup(await sale.reclaimTokens({ from: admin }), balanceSaleBefore)
 
             const balance0After = await token.balanceOf(accounts[0])
             const balanceSaleAfter = await token.balanceOf(sale.address)
@@ -397,17 +420,22 @@ contract('TokenSale', function(accounts) {
             token   = contracts.token
             trustee = contracts.trustee
             sale    = contracts.sale
+
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+            await token.setAdminAddress(admin)
          })
 
+
          it("reclaimTokens after finalize", async () => {
-            await sale.finalize()
-            await token.finalize()
+            await sale.finalize({ from: admin })
+            await token.finalize({ from: admin })
 
             const balance0Before = await token.balanceOf(accounts[0])
             const balanceSaleBefore = await token.balanceOf(sale.address)
 
-            assert.equal(await sale.reclaimTokens.call(), true)
-            Utils.checkTokensReclaimedEventGroup(await sale.reclaimTokens(), balanceSaleBefore)
+            assert.equal(await sale.reclaimTokens.call({ from: admin }), true)
+            Utils.checkTokensReclaimedEventGroup(await sale.reclaimTokens({ from: admin }), balanceSaleBefore)
 
             const balance0After = await token.balanceOf(accounts[0])
             const balanceSaleAfter = await token.balanceOf(sale.address)
@@ -420,7 +448,7 @@ contract('TokenSale', function(accounts) {
             const balanceSaleBefore = await token.balanceOf(sale.address)
             assert.equal(balanceSaleBefore, 0)
 
-            Utils.expectThrow(sale.reclaimTokens.call())
+            assert.equal(await sale.reclaimTokens.call({ from: admin }), true)
          })
       })
    })

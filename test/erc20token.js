@@ -12,6 +12,9 @@ const ERC20Token = artifacts.require("./ERC20Token.sol")
 //    symbol
 //    decimals
 //    totalSupply
+//    balances is private
+//    Constructor raised transfer event
+//    owner is as expected
 //
 // transfer
 //    transfer 0 tokens (fails)
@@ -52,8 +55,9 @@ contract('ERC20Token', (accounts) => {
    const DECIMALS       = 18
    const TOTAL_SUPPLY   = new BigNumber('800000000').mul(DECIMALSFACTOR)
 
+
    async function createToken() {
-      return await ERC20Token.new(SYMBOL, NAME, DECIMALS, TOTAL_SUPPLY)
+      return await ERC20Token.new(SYMBOL, NAME, DECIMALS, TOTAL_SUPPLY, { from: accounts[0], gas: 3500000 })
    }
 
 
@@ -65,20 +69,36 @@ contract('ERC20Token', (accounts) => {
          token = await createToken()
       })
 
+
       it("name", async () => {
          assert.equal(await token.name.call(), NAME)
       })
+
       it("symbol", async () => {
          assert.equal(await token.symbol.call(), SYMBOL)
       })
+
       it("decimals", async () => {
          assert.equal(await token.decimals.call(), DECIMALS)
       })
+
       it("totalSupply", async () => {
          assert.equal((await token.totalSupply.call()).toNumber(), TOTAL_SUPPLY.toNumber())
       })
+
       it("balances is private", async () => {
          assert.isTrue(typeof(token.balances) == 'undefined')
+      })
+
+      it('Constructor raised transfer event', async () => {
+          const receipt = await web3.eth.getTransactionReceipt(token.transactionHash)
+          assert.equal(receipt.logs.length, 1)
+          const logs = Utils.decodeLogs(token.abi, [ receipt.logs[0] ])
+          Utils.checkTransferEvent(logs[0], 0, accounts[0], TOTAL_SUPPLY)
+      })
+
+      it("owner", async () => {
+         assert.equal(await token.owner.call(), accounts[0])
       })
    })
 
@@ -93,14 +113,13 @@ contract('ERC20Token', (accounts) => {
 
 
       it("transfer 0 tokens", async () => {
-         assert.equal(await token.transfer.call(accounts[1], 0), false)
-         Utils.expectNoEvents(await token.transfer(accounts[1], 0))
+         assert.equal(await token.transfer.call(accounts[1], 0), true)
+         Utils.checkTransferEventGroup(await token.transfer(accounts[1], 0), accounts[0], accounts[1], 0)
       })
 
       it("transfer > balance", async () => {
          const balance = await token.balanceOf.call(accounts[0])
-         assert.equal(await token.transfer.call(accounts[1], balance.add(1)), false)
-         Utils.expectNoEvents(await token.transfer(accounts[1], balance.add(1)))
+         await Utils.expectThrow(token.transfer.call(accounts[1], balance.add(1)), false)
       })
 
       it("transfer = balance", async () => {
@@ -138,19 +157,16 @@ contract('ERC20Token', (accounts) => {
       })
 
 
-      it("transfer 0 from account 0 -> 1 with 0", async () => {
+      it("transfer 0 from account 0 -> 1 with 0 allowance", async () => {
          assert.equal(await token.approve.call(accounts[1], 0), true)
          assert.equal(await token.allowance.call(accounts[0], accounts[1]), 0)
-         assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 0, { from: accounts[1] }), false)
-         Utils.expectNoEvents(await token.transferFrom(accounts[0], accounts[1], 0, { from: accounts[1] }))
+         assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 0, { from: accounts[1] }), true)
       })
 
-      it("transfer 1000 from account 0 -> 1 without allowance", async () => {
-         assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 1000), false)
-         Utils.expectNoEvents(await token.transferFrom(accounts[0], accounts[1], 1000))
+      it("transfer 1000 from account 0 -> 1 with 0 allowance", async () => {
+         await Utils.expectThrow(token.transferFrom.call(accounts[0], accounts[1], 1000))
 
-         assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 1000, { from: accounts[1] }), false)
-         Utils.expectNoEvents(await token.transferFrom(accounts[0], accounts[1], 1000, { from: accounts[1] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[0], accounts[1], 1000, { from: accounts[1] }))
       })
 
       it("transfer 1000 from account 0 -> 1 with 10 allowance", async () => {
@@ -159,11 +175,9 @@ contract('ERC20Token', (accounts) => {
 
          assert.equal(await token.allowance.call(accounts[0], accounts[1]), 10)
 
-         assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 1000), false)
-         Utils.expectNoEvents(await token.transferFrom(accounts[0], accounts[1], 1000))
+         await Utils.expectThrow(token.transferFrom.call(accounts[0], accounts[1], 1000))
 
-         assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 1000, { from: accounts[1] }), false)
-         Utils.expectNoEvents(await token.transferFrom(accounts[0], accounts[1], 1000, { from: accounts[1] }))
+         await Utils.expectThrow(token.transferFrom.call(accounts[0], accounts[1], 1000, { from: accounts[1] }))
       })
 
       it("transfer 1000 from account 0 -> 1 with 1000 allowance", async () => {
@@ -180,8 +194,7 @@ contract('ERC20Token', (accounts) => {
 
          assert.equal(await token.allowance.call(accounts[0], accounts[1]), 1000)
 
-         assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 1000), false)
-         Utils.expectNoEvents(await token.transferFrom(accounts[0], accounts[1], 1000))
+         await Utils.expectThrow(token.transferFrom.call(accounts[0], accounts[1], 1000))
 
          assert.equal(await token.transferFrom.call(accounts[0], accounts[1], 1000, { from: accounts[1] }), true)
          Utils.checkTransferEventGroup(await token.transferFrom(accounts[0], accounts[1], 1000, { from: accounts[1] }), accounts[0], accounts[1], 1000)

@@ -2,25 +2,21 @@ const Moment = require('moment')
 const BigNumber = require('bignumber.js')
 const SolidityEvent = require("web3/lib/web3/event.js")
 
-var SimpleToken = artifacts.require("./SimpleToken.sol")
-var Trustee     = artifacts.require("./Trustee.sol")
-var TokenSale   = artifacts.require("./TokenSale.sol")
+var SimpleToken   = artifacts.require("./SimpleToken.sol")
+var Trustee       = artifacts.require("./Trustee.sol")
+var TokenSale     = artifacts.require("./TokenSale.sol")
+var TokenSaleMock= artifacts.require("./TokenSaleMock.sol")
 
 
 module.exports.deployContracts = async (artifacts, accounts) => {
 
-   var SimpleToken = artifacts.require("./SimpleToken.sol")
-   var Trustee     = artifacts.require("./Trustee.sol")
-   //var TokenSale   = artifacts.require("./TokenSale.sol")
-   var TokenSaleMock   = artifacts.require("./TokenSaleMock.sol")
-
-   const token     = await SimpleToken.new()
+   const token     = await SimpleToken.new({ from: accounts[0], gas: 3500000 })
    const trustee   = await Trustee.new(token.address, { from: accounts[0], gas: 3500000 })
    //const sale      = await TokenSale.new(token.address, trustee.address, accounts[0], { from: accounts[0], gas: 4500000 })
    const sale      = await TokenSaleMock.new(token.address, trustee.address, accounts[0], Moment().unix(), { from: accounts[0], gas: 4500000 })
 
-   await token.setOperationsAddress(sale.address)
-   await trustee.setOperationsAddress(sale.address)
+   await token.setOpsAddress(sale.address)
+   await trustee.setOpsAddress(sale.address)
 
    const TOKENS_MAX    = await sale.TOKENS_MAX.call()
    const TOKENS_SALE   = await sale.TOKENS_SALE.call()
@@ -43,10 +39,7 @@ module.exports.deployContracts = async (artifacts, accounts) => {
 
 module.exports.deployTrustee = async (artifacts, accounts) => {
 
-   var SimpleToken = artifacts.require("./SimpleToken.sol")
-   var Trustee     = artifacts.require("./Trustee.sol")
-
-   const token     = await SimpleToken.new()
+   const token     = await SimpleToken.new({ from: accounts[0], gas: 3500000 })
    const trustee   = await Trustee.new(token.address, { from: accounts[0], gas: 3500000 })
 
    return {
@@ -63,6 +56,45 @@ module.exports.changeTime = async (sale, newTime) => {
 
 module.exports.expectNoEvents = (result) => {
    assert.equal(result.receipt.logs.length, 0, "expected empty array of logs")
+}
+
+
+module.exports.checkOwnershipTransferInitiatedEventGroup = (result, _proposedOwner) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   assert.equal(event.event, "OwnershipTransferInitiated")
+   assert.equal(event.args._proposedOwner, _proposedOwner)
+}
+
+
+module.exports.checkOwnershipTransferCompletedEventGroup = (result) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   assert.equal(event.event, "OwnershipTransferCompleted")
+}
+
+
+module.exports.checkAdminAddressChangedEventGroup = (result, _newAddress) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   assert.equal(event.event, "AdminAddressChanged")
+   assert.equal(event.args._newAddress, _newAddress)
+}
+
+
+module.exports.checkOpsAddressChangedEventGroup = (result, _newAddress) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   assert.equal(event.event, "OpsAddressChanged")
+   assert.equal(event.args._newAddress, _newAddress)
 }
 
 
@@ -116,9 +148,11 @@ module.exports.checkWhitelistUpdatedEventGroup = (result, _account, _phase) => {
 }
 
 
-module.exports.checkTokensPurchasedEventGroup = (result, _from, _beneficiary, _cost, _tokens) => {
+module.exports.checkTokensPurchasedEventGroup = (result, _from, _beneficiary, _cost, _tokens, _autoFinalize) => {
 
-   assert.equal(result.receipt.logs.length, 2)
+   const eventCount = (_autoFinalize === true) ? 3 : 2
+
+   assert.equal(result.receipt.logs.length, eventCount)
 
    var logs = {}
 
@@ -142,6 +176,15 @@ module.exports.checkTokensPurchasedEventGroup = (result, _from, _beneficiary, _c
    assert.equal(logs.tokensPurchased[0].args._beneficiary, _beneficiary)
    assert.equal(logs.tokensPurchased[0].args._cost.toNumber(), _cost.toNumber())
    assert.equal(logs.tokensPurchased[0].args._tokens.toNumber(), _tokens.toNumber())
+
+   if (_autoFinalize !== true) {
+      return
+   }
+
+   logs.finalized = decodeLogs(TokenSale.abi, [ result.receipt.logs[2] ])
+   assert.equal(logs.finalized.length, 1)
+
+   assert.equal(logs.finalized[0].event, "Finalized")
 }
 
 
@@ -249,6 +292,10 @@ module.exports.calculateCostFromTokens = function (tokensPerKEther, tokenAmount)
    return tokenAmount.mul(1000).div(tokensPerKEther)
 }
 
+
+module.exports.decodeLogs = (abi, logs) => {
+    return decodeLogs(abi, logs)
+}
 
 
 function decodeLogs(abi, logs) {

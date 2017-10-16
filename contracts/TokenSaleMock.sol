@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.17;
 
 // ----------------------------------------------------------------------------
 // Simple Token - Token Sale Mock Implementation
@@ -24,14 +24,14 @@ contract TokenSaleMock is TokenSale {
    uint256 public _now;
 
 
-   function TokenSaleMock(SimpleToken _tokenContract, Trustee _trustee, address _wallet, uint256 _currentTime)
+   function TokenSaleMock(SimpleToken _tokenContract, Trustee _trustee, address _wallet, uint256 _currentTime) public
       TokenSale(_tokenContract, _trustee, _wallet)
    {
       _now = _currentTime;
    }
 
 
-   function currentTime() public constant returns (uint256) {
+   function currentTime() public view returns (uint256) {
       return _now;
    }
 
