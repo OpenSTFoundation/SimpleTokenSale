@@ -160,14 +160,14 @@ contract('TokenSale', function(accounts) {
             assert.equal(ethBalanceWalletAfter.sub(ethBalanceWalletBefore).toNumber(), cost.toNumber())
          })
 
-         it("buy tokens to purchase maximum possible", async () => {
+         it("buy tokens to purchase 1 less than maximum possible", async () => {
             const tokenBalance1Before      = await token.balanceOf(accounts[1])
             const tokenBalanceSaleBefore   = await token.balanceOf(sale.address)
             const ethBalanceSaleBefore     = await Utils.getBalance(sale.address)
             const tokenBalanceWalletBefore = await token.balanceOf(wallet)
             const ethBalanceWalletBefore   = await Utils.getBalance(wallet)
 
-            const tokens = PHASE1_ACCOUNT_TOKENS_MAX.sub(tokenBalance1Before)
+            const tokens = PHASE1_ACCOUNT_TOKENS_MAX.sub(tokenBalance1Before).sub(1)
             const cost = Utils.calculateCostFromTokens(TOKENS_PER_KETHER, tokens).trunc()
 
             assert.equal(await sale.buyTokens.call({ from: accounts[1], value: cost }), true)
@@ -187,8 +187,85 @@ contract('TokenSale', function(accounts) {
             assert.equal(ethBalanceWalletAfter.sub(ethBalanceWalletBefore).toNumber(), cost.toNumber())
          })
 
+         it("buy leftover tokens", async () => {
+            const tokenBalance1Before      = await token.balanceOf(accounts[1])
+            const tokenBalanceSaleBefore   = await token.balanceOf(sale.address)
+            const ethBalanceSaleBefore     = await Utils.getBalance(sale.address)
+            const tokenBalanceWalletBefore = await token.balanceOf(wallet)
+            const ethBalanceWalletBefore   = await Utils.getBalance(wallet)
+
+            const tokens = PHASE1_ACCOUNT_TOKENS_MAX.sub(tokenBalance1Before)
+            const cost = Utils.calculateCostFromTokens(TOKENS_PER_KETHER, tokens).trunc()
+
+            assert.isTrue(cost.lt(CONTRIBUTION_MIN.toNumber()), "Expected cost to be less than min contribution")
+            assert.equal(await sale.buyTokens.call({ from: accounts[1], value: CONTRIBUTION_MIN}), true)
+            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[1], value: CONTRIBUTION_MIN }), sale.address, accounts[1], cost, tokens, false)
+
+            const tokenBalance1After       = await token.balanceOf(accounts[1])
+            const ethBalance1After         = await Utils.getBalance(accounts[1])
+            const tokenBalanceSaleAfter    = await token.balanceOf(sale.address)
+            const ethBalanceSaleAfter      = await Utils.getBalance(sale.address)
+            const tokenBalanceWalletAfter  = await token.balanceOf(wallet)
+            const ethBalanceWalletAfter    = await Utils.getBalance(wallet)
+
+            assert.equal(tokenBalance1After.sub(tokenBalance1Before).toNumber(), tokens.toNumber())
+            assert.equal(tokenBalance1After.toNumber(), PHASE1_ACCOUNT_TOKENS_MAX.toNumber())
+            assert.equal(tokenBalanceSaleAfter.sub(tokenBalanceSaleBefore).toNumber(), tokens.mul(-1).toNumber())
+            assert.equal(ethBalanceSaleAfter.sub(ethBalanceSaleBefore).toNumber(), 0)
+            assert.equal(tokenBalanceWalletAfter.sub(tokenBalanceWalletBefore).toNumber(), 0)
+            assert.equal(ethBalanceWalletAfter.sub(ethBalanceWalletBefore).toNumber(), cost.toNumber())
+         })
+
          it("buy CONTRIBUTION_MIN ETH more tokens", async () => {
             await Utils.expectThrow(sale.buyTokens.call({ from: accounts[1], value: CONTRIBUTION_MIN }))
+         })
+
+         it("enter phase 1 with only 1 token left", async () => {
+            contracts = await Utils.deployContracts(artifacts, accounts)
+
+            token     = contracts.token
+            trustee   = contracts.trustee
+            sale      = contracts.sale
+
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+
+            await sale.updateWhitelist(accounts[1], 1, { from: ops })
+
+
+            const tokenBalance1Before      = await token.balanceOf(accounts[1])
+            var   tokenBalanceSaleBefore   = await token.balanceOf(sale.address)
+            const ethBalanceSaleBefore     = await Utils.getBalance(sale.address)
+            const tokenBalanceWalletBefore = await token.balanceOf(wallet)
+
+            await sale.addPresale(accounts[1], tokenBalanceSaleBefore.sub(1), 0, { from: admin })
+
+            await Utils.changeTime(sale, PHASE1_START_TIME + 1)
+
+            tokenBalanceSaleBefore         = await token.balanceOf(sale.address)
+
+            const ethBalanceWalletBefore   = await Utils.getBalance(wallet)
+            const tokens = tokenBalanceSaleBefore
+            const cost = Utils.calculateCostFromTokens(TOKENS_PER_KETHER, tokens).trunc()
+
+            assert.isTrue(cost.lt(CONTRIBUTION_MIN.toNumber()), "Expected cost to be less than min contribution")
+            assert.equal(await sale.buyTokens.call({ from: accounts[1], value: CONTRIBUTION_MIN}), true)
+            Utils.checkTokensPurchasedEventGroup(await sale.buyTokens({ from: accounts[1], value: CONTRIBUTION_MIN }), sale.address, accounts[1], cost, tokens, true)
+
+            const tokenBalance1After       = await token.balanceOf(accounts[1])
+            const ethBalance1After         = await Utils.getBalance(accounts[1])
+            const tokenBalanceSaleAfter    = await token.balanceOf(sale.address)
+            const ethBalanceSaleAfter      = await Utils.getBalance(sale.address)
+            const tokenBalanceWalletAfter  = await token.balanceOf(wallet)
+            const ethBalanceWalletAfter    = await Utils.getBalance(wallet)
+
+            assert.equal(tokenBalance1After.sub(tokenBalance1Before).toNumber(), tokens.toNumber())
+            assert.equal(tokenBalance1After.toNumber(), 1)
+            assert.equal(tokenBalanceSaleAfter.sub(tokenBalanceSaleBefore).toNumber(), tokens.mul(-1).toNumber())
+            assert.equal(tokenBalanceSaleAfter.toNumber(), 0)
+            assert.equal(ethBalanceSaleAfter.sub(ethBalanceSaleBefore).toNumber(), 0)
+            assert.equal(tokenBalanceWalletAfter.sub(tokenBalanceWalletBefore).toNumber(), 0)
+            assert.equal(ethBalanceWalletAfter.sub(ethBalanceWalletBefore).toNumber(), cost.toNumber())
          })
       })
 
@@ -253,15 +330,6 @@ contract('TokenSale', function(accounts) {
             const tokenBalanceWalletBefore = await token.balanceOf(wallet)
             const ethBalanceWalletBefore   = await Utils.getBalance(wallet)
 
-            /*
-            console.log("Total tokens sold: " + totalTokensSoldBefore.toString())
-            console.log("Tokens to buy: " + tokens.toString())
-            console.log("ETH balance: " + ethBalance1Before.toString())
-            console.log("Cost to buy: " + cost.toString())
-            console.log("Contribution: " + contribution.toString())
-            console.log("CONTRIBUTION_MAX: " + CONTRIBUTION_MAX.toString())
-            */
-
             assert.isTrue(contribution.lt(CONTRIBUTION_MAX), "contribution exceeds CONTRIBUTION_MAX")
             assert.isTrue(cost.toNumber() > 0, "cost should be > 0")
             assert.isTrue(ethBalance1Before.gt(contribution), "not enough balance in account to buy all tokens")
@@ -295,13 +363,6 @@ contract('TokenSale', function(accounts) {
             var balance = await Utils.getBalance(accounts[1])
 
             assert.equal(tokensToBuy.toNumber(), 0)
-            /*
-            console.log("Total tokens sold: " + totalTokensSold.toString())
-            console.log("Tokens to buy: " + tokensToBuy.toString())
-            console.log("ETH balance: " + balance.toString())
-            console.log("Cost to buy: " + cost.toString())
-            console.log("CONTRIBUTION_MAX: " + CONTRIBUTION_MAX.toString())
-            */
 
             await Utils.expectThrow(sale.buyTokens.call({ from: accounts[1], value: CONTRIBUTION_MIN }))
          })
