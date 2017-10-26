@@ -41,7 +41,7 @@ contract GrantableAllocations is Owned {
 	// enum grantableAllocations status
 	//   Unlocked  - unlocked and ungranted
 	//   Locked    - locked and ungranted
-	//   Granted - locked and granted
+	//   Granted   - locked and granted
 	//   Failed    - locked and granted with failure
 	enum Status { Unlocked, Locked, Granted, Failed }
 
@@ -149,7 +149,7 @@ contract GrantableAllocations is Owned {
 		}
 
 		if (status != Status.Failed) {
-			status = Status.Processed;
+			status = Status.Granted;
 			return true;
 		} else {
 			return false;
