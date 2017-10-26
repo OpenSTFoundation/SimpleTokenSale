@@ -18,9 +18,9 @@ contract('All Contracts', function(accounts) {
    const TOKEN_NAME     = "Simple Token"
    const TOKEN_DECIMALS = 18
 
-   const PHASE1_START_TIME         = 1510660800 // 2017-11-14, 12:00:00 UTC
-   const PHASE2_START_TIME         = 1510747200 // 2017-11-15, 12:00:00 UTC
-   const END_TIME                  = 1511265599 // 2017-11-21, 11:59:59 UTC
+   const PHASE1_START_TIME         = 1510664400 // 2017-11-14, 13:00:00 UTC
+   const PHASE2_START_TIME         = 1510750800 // 2017-11-15, 13:00:00 UTC
+   const END_TIME                  = 1511269199 // 2017-11-21, 12:59:59 UTC
    const CONTRIBUTION_MIN          = web3.toWei(0.1, "ether")
    const CONTRIBUTION_MAX          = web3.toWei("10000", "ether")
 
@@ -224,10 +224,14 @@ contract('All Contracts', function(accounts) {
    describe('Before sale phase', async () => {
 
       it("Set price for tokens", async () => {
-         const price = new BigNumber(300000).div(0.1667)
-
+         // Here we use a price of ~240M tokens / Ether to make it easier to test boundaries.
+         const price = new BigNumber("240000000").mul(1000)
          const o = await sale.setTokensPerKEther(price, { from: admin })
          logReceipt(o.receipt, "TokenSale.setTokensPerKEther")
+      })
+
+      it("Set max tokens for phase 1", async () => {
+         await sale.setPhase1AccountTokensMax(new BigNumber("200000000").mul(DECIMALSFACTOR), { from: admin })
       })
    })
 
@@ -237,7 +241,7 @@ contract('All Contracts', function(accounts) {
       it("whitelisted 1 buys during phase 1", async () => {
          await sale.changeTime(PHASE1_START_TIME, { from: saleOwner })
 
-         const o = web3.eth.sendTransaction({ from: whitelisted1, to: sale.address, value: web3.toWei(1, 'ether') })
+         const o = web3.eth.sendTransaction({ from: whitelisted1, to: sale.address, value: web3.toWei(0.5, 'ether') })
          await logTransaction(o, "sendTransaction (buy tokens)")
       })
 
@@ -246,22 +250,30 @@ contract('All Contracts', function(accounts) {
 
          web3.eth.sendTransaction({ from: whitelisted2, to: sale.address, value: web3.toWei(1, 'ether') })
       })
-
    })
 
 
    describe('Sale finalization phase', async () => {
 
-      it("finalize the sale", async () => {
-         const o1 = await sale.finalize({ from: admin })
-         const o2 = await sale.reclaimTokens({ from: admin })
-         logReceipt(o1.receipt, "TokenSale.finalize")
-         logReceipt(o2.receipt, "TokenSale.reclaimTokens")
+      it("Check that the sale has been auto-finalized (since all tokens were purchased.", async () => {
+         assert.equal(await sale.finalized.call(), true)
       })
 
       it("finalize the token", async () => {
          const o = await token.finalize({ from: admin })
          logReceipt(o.receipt, "Token.finalize")
+      })
+
+      it("reclaim the tokens", async () => {
+         const saleTokenBalance = await token.balanceOf(sale.address)
+         assert.equal(saleTokenBalance, 0)
+
+         const ownerBalanceBefore = await token.balanceOf(saleOwner)
+         const o = await sale.reclaimTokens({ from: admin })
+         logReceipt(o.receipt, "TokenSale.reclaimTokens")
+
+         const ownerBalanceAfter = await token.balanceOf(saleOwner)
+         assert.equal(ownerBalanceAfter.sub(ownerBalanceBefore).toNumber(), 0)
       })
 
       // NOTE: Ordering is different from spec document. We have to finalize the token before this transfer.
