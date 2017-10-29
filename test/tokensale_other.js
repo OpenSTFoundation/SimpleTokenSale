@@ -53,7 +53,7 @@ contract('TokenSale', function(accounts) {
    const CONTRIBUTION_MIN          = new BigNumber(web3.toWei(0.1, "ether"))
    const CONTRIBUTION_MAX          = new BigNumber(web3.toWei(1000000, "ether"))
 
-   const PHASE1_ACCOUNT_TOKENS_MAX = new BigNumber('18000').mul(DECIMALSFACTOR)
+   const PHASE1_ACCOUNT_TOKENS_MAX = new BigNumber('36000').mul(DECIMALSFACTOR)
 
    const TOKENS_MAX                = new BigNumber('800000000').mul(DECIMALSFACTOR)
    const TOKENS_SALE               = new BigNumber('240000000').mul(DECIMALSFACTOR)
@@ -63,7 +63,7 @@ contract('TokenSale', function(accounts) {
    const TOKENS_ACCELERATOR_MAX    = new BigNumber('257558034').mul(DECIMALSFACTOR)
    const TOKENS_FUTURE             = new BigNumber('120000000').mul(DECIMALSFACTOR)
 
-   const TOKENS_PER_KETHER         = new BigNumber('1800000')
+   const TOKENS_PER_KETHER         = new BigNumber('3600000')
 
    const owner  = accounts[0]
    const admin  = accounts[1]

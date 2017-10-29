@@ -34,7 +34,7 @@ contract('All Contracts', function(accounts) {
    const TOKENS_ACCELERATOR_MAX    = new BigNumber('257558034').mul(DECIMALSFACTOR)
    const TOKENS_FUTURE             = new BigNumber('120000000').mul(DECIMALSFACTOR)
 
-   const TOKENS_PER_KETHER         = new BigNumber('1800000')
+   const TOKENS_PER_KETHER         = new BigNumber('3600000')
 
 
    const deployKey        = accounts[0]
