@@ -42,6 +42,9 @@ contract GrantableAllocations is Owned {
 	// Trustee admin
 	address public trusteeAdmin;
 
+	// Maximum accounts to avoid hitting the block gas limit in GrantableAllocations.grantGrantableAllocations
+	uint8 public constant MAX_GRANTEES = 35;
+
 	// enum grantableAllocations status
 	//   Unlocked  - unlocked and unadded
 	//   Locked    - locked and unadded
@@ -97,6 +100,7 @@ contract GrantableAllocations is Owned {
 	function addGrantableAllocation(address _grantee, uint256 _amount, bool _revokable) public onlyOwner onlyIfUnlocked returns (bool) {
 		require(_grantee != address(0));
 		require(_amount > 0);
+        require(grantees.length < MAX_GRANTEES);
 
 		GrantableAllocation storage allocation = grantableAllocations[_grantee];
 
