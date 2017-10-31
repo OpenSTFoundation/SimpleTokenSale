@@ -277,7 +277,7 @@ module.exports.checkGrantableAllocationAddedEventGroup = (result, _grantee, _amo
 }
 
 
-module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount, _revokable, _processingStatus) => {
+module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount, _revokable) => {
    if (Number.isInteger(_amount)) {
       _amount = new BigNumber(_amount)
    }
@@ -286,7 +286,6 @@ module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount,
    assert.equal(event.args._grantee, _grantee)
    assert.equal(event.args._amount.toNumber(), _amount.toNumber())
    assert.equal(event.args._revokable, _revokable)
-   assert.equal(event.args._processingStatus, _processingStatus)
 }
 
 module.exports.checkApprovalEventGroup = (result, _owner, _spender, _value) => {

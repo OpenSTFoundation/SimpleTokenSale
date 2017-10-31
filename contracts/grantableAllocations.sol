@@ -43,27 +43,20 @@ contract GrantableAllocations is Owned {
 	address public trusteeAdmin;
 
 	// enum grantableAllocations status
-	//   Unlocked  - unlocked and ungranted
-	//   Locked    - locked and ungranted
-	//   Granted   - locked and granted
-	//   Failed    - locked and granted with failure
-	enum Status { Unlocked, Locked, Granted, Failed }
+	//   Unlocked  - unlocked and unadded
+	//   Locked    - locked and unadded
+	//   Completed - locked and completed
+	enum Status { Unlocked, Locked, Completed }
 
 	// struct GrantableAllocation
 	struct GrantableAllocation {
 		uint256 amount;
 		bool    revokable;
-		// processing status :
-		//   0 - ungranted
-		//   1 - successfully granted
-		//  -1 - failed to grant
-		int8    grantingStatus;
 	}
 
 	// events
 	event GrantableAllocationAdded(address indexed _grantee, uint256 _amount, bool _revokable);
-	event GrantableAllocationGranted(address indexed _grantee, uint256 _amount, bool _revokable,
-		bool _processingStatus);
+	event GrantableAllocationGranted(address indexed _grantee, uint256 _amount, bool _revokable);
 	event Locked();
 
     /**
@@ -142,26 +135,23 @@ contract GrantableAllocations is Owned {
        if locked (which implies that it has not previously been granted)
     */
 	function grantGrantableAllocations() public onlyOwner onlyIfLocked returns (bool) {
+		// Confirm that admin address for Trustee has been changed
+		require(trusteeContract.adminAddress() == address(this));
+
 		for (uint256 i = 0; i < grantees.length; i++) {
 			GrantableAllocation storage allocation = grantableAllocations[grantees[i]];
 			
-			require(allocation.grantingStatus == 0);
-			
-			bool ok = trusteeContract.grantAllocation(grantees[i], allocation.amount, allocation.revokable);
-			allocation.grantingStatus = (ok == true) ? int8(1) : -1;
-			if (!ok) status = Status.Failed;
+			// Trustee.grantAllocation throws--false is not returned
+			require(trusteeContract.grantAllocation(grantees[i], allocation.amount, allocation.revokable));
 
-			GrantableAllocationGranted(grantees[i], allocation.amount, allocation.revokable, ok);
+			GrantableAllocationGranted(grantees[i], allocation.amount, allocation.revokable);
 		}
 
-		if (status != Status.Failed) {
-			status = Status.Granted;
+		// Revert admin address
+		trusteeContract.setAdminAddress(trusteeAdmin);
 
-			// Revert admin address
-			trusteeContract.setAdminAddress(trusteeAdmin);
-			return true;
-		} else {
-			return false;
-		}
+		status = Status.Completed;
+
+		return true;
 	}
 }

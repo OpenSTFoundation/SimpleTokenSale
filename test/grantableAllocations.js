@@ -117,8 +117,8 @@ contract('GrantableAllocations', function(accounts) {
 
             // A GrantableAllocationGranted event is emitted for each allocation
             assert.equal(await grantableAllocations.status.call({ from: accounts[0] }), 2)
-            Utils.checkGrantableAllocationGrantedEvent(result.logs[0], accounts[0], 1, false, true)
-            Utils.checkGrantableAllocationGrantedEvent(result.logs[1], accounts[1], 1, false, true)
+            Utils.checkGrantableAllocationGrantedEvent(result.logs[0], accounts[0], 1, false)
+            Utils.checkGrantableAllocationGrantedEvent(result.logs[1], accounts[1], 1, false)
 
             // GrantableAllocations.grantGrantableAllocations resets Trustee.admin to the address there
             // before GrantableAllocations was locked
