@@ -24,7 +24,7 @@ contract FutureTokenSaleLockBoxMock is FutureTokenSaleLockBox {
        @param _tokenSale TokenSale contract
        @param _currentTime mock current time
     */
-    function FutureTokenSaleLockBoxMock(TokenInterface _simpleToken, TokenSaleInterface _tokenSale, uint256 _currentTime)
+    function FutureTokenSaleLockBoxMock(ERC20Interface _simpleToken, TokenSaleInterface _tokenSale, uint256 _currentTime)
              FutureTokenSaleLockBox(_simpleToken, _tokenSale)
              public
     {
