@@ -146,8 +146,8 @@ contract Presales is Owned {
 		for (uint256 i = 0; i < accounts.length; i++) {
 			Presale storage presale = presales[accounts[i]];
 
-			// TokenSale.addPresale (and Trustee.grantAllocation) throw;
-			// they do not return false
+			// TokenSale.addPresale (and Trustee.grantAllocation) throws;
+			// false is not returned
 			require(tokenSale.addPresale(accounts[i], presale.baseTokens, presale.bonusTokens));
 
 			PresaleAddedToTokenSale(accounts[i], presale.baseTokens, presale.bonusTokens);
