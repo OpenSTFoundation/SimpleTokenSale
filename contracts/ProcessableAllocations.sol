@@ -38,6 +38,10 @@ contract ProcessableAllocations is Owned {
 	// Trustee contract
 	TrusteeInterface trusteeContract;
 
+	// Maximum accounts to avoid hitting the block gas limit in
+	// ProcessableAllocations.processProcessableAllocations
+	uint8 public constant MAX_GRANTEES = 35;
+
 	// enum processableAllocations status
 	//   Unlocked  - unlocked and unprocessed
 	//   Locked    - locked and unprocessed
@@ -98,6 +102,7 @@ contract ProcessableAllocations is Owned {
 	function addProcessableAllocation(address _grantee, uint256 _amount) public onlyOwner onlyIfUnlocked returns (bool) {
 		require(_grantee != address(0));
 		require(_amount > 0);
+        require(grantees.length < MAX_GRANTEES);
 
 		ProcessableAllocation storage allocation = processableAllocations[_grantee];
 
@@ -139,7 +144,7 @@ contract ProcessableAllocations is Owned {
 			require(allocation.processingStatus == 0);
 			
 			bool ok = trusteeContract.processAllocation(grantees[i], allocation.amount);
-			allocation.processingStatus = (ok == true) ? int8(1) : -1;
+			allocation.processingStatus = (ok) ? int8(1) : -1;
 			if (!ok) status = Status.Failed;
 
 			ProcessableAllocationProcessed(grantees[i], allocation.amount, ok);
