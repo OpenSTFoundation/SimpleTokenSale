@@ -16,6 +16,7 @@ import "./Owned.sol";
    @dev Provides interface for calling Trustee.adminAddress and Trustee.grantAllocation
 */
 contract TrusteeInterface {
+    function setAdminAddress(address _adminAddress) external returns (bool);
     function adminAddress() public view returns (address);
     function grantAllocation(address _grantee, uint256 _amount, bool _revokable) external returns (bool);
 }
@@ -37,6 +38,9 @@ contract GrantableAllocations is Owned {
 
 	// Trustee contract
 	TrusteeInterface trusteeContract;
+
+	// Trustee admin
+	address public trusteeAdmin;
 
 	// enum grantableAllocations status
 	//   Unlocked  - unlocked and ungranted
@@ -124,6 +128,8 @@ contract GrantableAllocations is Owned {
 
 		// on locking the grantable allocations the owner is transferred
 		// to admin of trustee contract
+		// Store admin to revert after grantable allocations are added
+		trusteeAdmin = trusteeContract.adminAddress();
 		initiateOwnershipTransfer(trusteeContract.adminAddress());
 
 		Locked();
@@ -150,6 +156,9 @@ contract GrantableAllocations is Owned {
 
 		if (status != Status.Failed) {
 			status = Status.Granted;
+
+			// Revert admin address
+			trusteeContract.setAdminAddress(trusteeAdmin);
 			return true;
 		} else {
 			return false;

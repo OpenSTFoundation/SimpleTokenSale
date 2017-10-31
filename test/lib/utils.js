@@ -108,15 +108,11 @@ module.exports.deployGrantableAllocations = async (artifacts, accounts) => {
 
    const TOKENS_FOUNDERS = await tokenSaleConfig.TOKENS_FOUNDERS.call()
 
-   // Only the Admin key(s) can call certain functions
-   await token.setAdminAddress(accounts[1], { from: accounts[0] })
+   // Only the Admin key can call certain functions
    await trustee.setAdminAddress(accounts[1], { from: accounts[0] })
 
    // Trustee contract must hold tokens to grant allocations
    await token.transfer(trustee.address, TOKENS_FOUNDERS, { from: accounts[0] })
-
-   // Token must be finalized for Trustee to grant allocations
-   await token.finalize({ from: accounts[1] })
 
    return {
       trustee                  : trustee,
@@ -286,7 +282,7 @@ module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount,
       _amount = new BigNumber(_amount)
    }
 
-   assert.equal(event.event, "ProcessableAllocationProcessed")
+   assert.equal(event.event, "GrantableAllocationGranted")
    assert.equal(event.args._grantee, _grantee)
    assert.equal(event.args._amount.toNumber(), _amount.toNumber())
    assert.equal(event.args._revokable, _revokable)
