@@ -96,6 +96,31 @@ module.exports.deployProcessableAllocations = async (artifacts, accounts) => {
 }
 
 
+module.exports.deployGrantableAllocations = async (artifacts, accounts) => {
+
+   var TokenSaleConfig            = artifacts.require("./TokenSaleConfig.sol")
+   var GrantableAllocations       = artifacts.require("./GrantableAllocations.sol")
+
+   const token   = await SimpleToken.new()
+   const tokenSaleConfig   = await TokenSaleConfig.new()
+   const trustee = await Trustee.new(token.address, { from: accounts[0], gas: 3500000 })
+   const grantableAllocations = await GrantableAllocations.new(trustee.address, { from: accounts[0], gas: 3500000 })
+
+   const TOKENS_FOUNDERS = await tokenSaleConfig.TOKENS_FOUNDERS.call()
+
+   // Only the Admin key can call certain functions
+   await trustee.setAdminAddress(accounts[1], { from: accounts[0] })
+
+   // Trustee contract must hold tokens to grant allocations
+   await token.transfer(trustee.address, TOKENS_FOUNDERS, { from: accounts[0] })
+
+   return {
+      trustee                  : trustee,
+      grantableAllocations     : grantableAllocations
+   }
+}
+
+
 module.exports.changeTime = async (sale, newTime) => {
    await sale.changeTime(newTime)
 };
@@ -235,6 +260,33 @@ module.exports.checkProcessableAllocationProcessedEvent = (event, _grantee, _amo
    assert.equal(event.args._processingStatus, _processingStatus)
 }
 
+
+module.exports.checkGrantableAllocationAddedEventGroup = (result, _grantee, _amount, _revokable) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   if (Number.isInteger(_amount)) {
+      _amount = new BigNumber(_amount)
+   }
+
+   assert.equal(event.event, "GrantableAllocationAdded")
+   assert.equal(event.args._grantee, _grantee)
+   assert.equal(event.args._amount.toNumber(), _amount.toNumber())
+   assert.equal(event.args._revokable, _revokable)
+}
+
+
+module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount, _revokable) => {
+   if (Number.isInteger(_amount)) {
+      _amount = new BigNumber(_amount)
+   }
+
+   assert.equal(event.event, "GrantableAllocationGranted")
+   assert.equal(event.args._grantee, _grantee)
+   assert.equal(event.args._amount.toNumber(), _amount.toNumber())
+   assert.equal(event.args._revokable, _revokable)
+}
 
 module.exports.checkApprovalEventGroup = (result, _owner, _spender, _value) => {
    assert.equal(result.logs.length, 1)
