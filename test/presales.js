@@ -153,12 +153,12 @@ contract('Presales', function(accounts) {
 
             assert.equal(await presales.status.call({ from: accounts[0] }), 2)
             Utils.checkPresaleAddedToPresalesEvent(result.logs[0], accounts[0], 3, 2)
-            Utils.checkPresaleAddedToTokenSaleEvent(result.logs[1], accounts[0], 3, 2, true)
+            Utils.checkPresaleAddedToTokenSaleEvent(result.logs[1], accounts[0], 3, 2)
             Utils.checkPresaleAddedToPresalesEvent(result.logs[2], accounts[1], 3, 2)
-            Utils.checkPresaleAddedToTokenSaleEvent(result.logs[3], accounts[1], 3, 2, true)
+            Utils.checkPresaleAddedToTokenSaleEvent(result.logs[3], accounts[1], 3, 2)
 
             // Presales.process resets TokenSale.admin to the address there
-            // before it was locked
+            // before Presales was locked
             assert.equal(await tokenSale.adminAddress.call({ from: accounts[0] }), accounts[1])
         })
     })

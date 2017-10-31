@@ -48,25 +48,18 @@ contract Presales is Owned {
 	// enum presales status
 	//   Unlocked  - unlocked and unadded
 	//   Locked    - locked and unadded
-	//   Added - locked and added
-	//   Failed    - locked and added with failure
-	enum Status { Unlocked, Locked, Added, Failed }
+	//   Completed - locked and completed
+	enum Status { Unlocked, Locked, Completed }
 
 	// struct Presale
 	struct Presale {
 		uint256 baseTokens;
 		uint256 bonusTokens;
-		// adding status :
-		//   0 - unadded
-		//   1 - successfully added
-		//  -1 - failed to add
-		int8    addingStatus;
 	}
 
 	// events
 	event PresaleAdded(address indexed _account, uint256 _baseTokens, uint256 _bonusTokens);
-	event PresaleAddedToTokenSale(address indexed _account, uint256 _baseTokens, uint256 _bonusTokens,
-		bool _addingStatus);
+	event PresaleAddedToTokenSale(address indexed _account, uint256 _baseTokens, uint256 _bonusTokens);
 	event Locked();
 
     /**
@@ -152,24 +145,19 @@ contract Presales is Owned {
 
 		for (uint256 i = 0; i < accounts.length; i++) {
 			Presale storage presale = presales[accounts[i]];
-			
-			require(presale.addingStatus == 0);
-			
-			bool ok = tokenSale.addPresale(accounts[i], presale.baseTokens, presale.bonusTokens);
-			presale.addingStatus = (ok) ? int8(1) : -1;
-			if (!ok) status = Status.Failed;
 
-			PresaleAddedToTokenSale(accounts[i], presale.baseTokens, presale.bonusTokens, ok);
+			// TokenSale.addPresale (and Trustee.grantAllocation) throw;
+			// they do not return false
+			require(tokenSale.addPresale(accounts[i], presale.baseTokens, presale.bonusTokens));
+
+			PresaleAddedToTokenSale(accounts[i], presale.baseTokens, presale.bonusTokens);
 		}
 
-		if (status != Status.Failed) {
-			status = Status.Added;
+		// Revert admin address
+		tokenSale.setAdminAddress(tokenSaleAdmin);
 
-			// Revert admin address
-			tokenSale.setAdminAddress(tokenSaleAdmin);
-			return true;
-		} else {
-			return false;
-		}
+		status = Status.Completed;
+
+		return true;
 	}
 }

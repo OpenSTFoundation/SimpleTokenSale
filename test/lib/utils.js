@@ -277,7 +277,7 @@ module.exports.checkProcessableAllocationProcessedEvent = (event, _grantee, _amo
    assert.equal(event.args._processingStatus, _processingStatus)
 }
 
-module.exports.checkPresaleAddedToTokenSaleEvent = (event, _account, _baseTokens, _bonusTokens, _addingStatus) => {
+module.exports.checkPresaleAddedToTokenSaleEvent = (event, _account, _baseTokens, _bonusTokens) => {
    if (Number.isInteger(_baseTokens)) {
       _baseTokens = new BigNumber(_baseTokens)
    }
@@ -290,7 +290,6 @@ module.exports.checkPresaleAddedToTokenSaleEvent = (event, _account, _baseTokens
    assert.equal(event.args._account, _account)
    assert.equal(event.args._baseTokens.toNumber(), _baseTokens.toNumber())
    assert.equal(event.args._bonusTokens.toNumber(), _bonusTokens.toNumber())
-   assert.equal(event.args._addingStatus, _addingStatus)
 }
 
 
