@@ -293,22 +293,6 @@ module.exports.checkPresaleAddedToTokenSaleEvent = (event, _account, _baseTokens
    assert.equal(event.args._addingStatus, _addingStatus)
 }
 
-module.exports.checkPresaleAddedToTokenSaleEvent = (event, _account, _baseTokens, _bonusTokens, _addingStatus) => {
-   if (Number.isInteger(_baseTokens)) {
-      _baseTokens = new BigNumber(_baseTokens)
-   }
-
-   if (Number.isInteger(_bonusTokens)) {
-      _bonusTokens = new BigNumber(_bonusTokens)
-   }
-
-   assert.equal(event.event, "PresaleAddedToTokenSale")
-   assert.equal(event.args._account, _account)
-   assert.equal(event.args._baseTokens.toNumber(), _baseTokens.toNumber())
-   assert.equal(event.args._bonusTokens.toNumber(), _bonusTokens.toNumber())
-   assert.equal(event.args._addingStatus, _addingStatus)
-}
-
 
 module.exports.checkApprovalEventGroup = (result, _owner, _spender, _value) => {
    assert.equal(result.logs.length, 1)
