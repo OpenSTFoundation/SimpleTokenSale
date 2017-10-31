@@ -42,6 +42,9 @@ contract Presales is Owned {
 	// TokenSale admin
 	address public tokenSaleAdmin;
 
+	// Maximum accounts to avoid hitting the block gas limit in Presales.process
+	uint8 public constant MAX_ACCOUNTS = 35;
+
 	// enum presales status
 	//   Unlocked  - unlocked and unadded
 	//   Locked    - locked and unadded
@@ -105,6 +108,7 @@ contract Presales is Owned {
 		require(_account != address(0));
         require(_baseTokens > 0);
         require(_bonusTokens < _baseTokens);
+        require(accounts.length < MAX_ACCOUNTS);
 
 		Presale storage presale = presales[_account];
 
@@ -152,7 +156,7 @@ contract Presales is Owned {
 			require(presale.addingStatus == 0);
 			
 			bool ok = tokenSale.addPresale(accounts[i], presale.baseTokens, presale.bonusTokens);
-			presale.addingStatus = (ok == true) ? int8(1) : -1;
+			presale.addingStatus = (ok) ? int8(1) : -1;
 			if (!ok) status = Status.Failed;
 
 			PresaleAddedToTokenSale(accounts[i], presale.baseTokens, presale.bonusTokens, ok);
