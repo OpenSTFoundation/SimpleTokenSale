@@ -9,6 +9,7 @@ pragma solidity ^0.4.17;
 // The MIT Licence.
 // ----------------------------------------------------------------------------
 
+import "./ERC20Interface.sol";
 import "./SafeMath.sol";
 import "./Owned.sol";
 
@@ -21,14 +22,6 @@ contract TokenSaleInterface {
 }
 
 /**
-   @title TokenInterface
-   @dev Provides interface for calling SimpleToken.transfer
-*/
-contract TokenInterface {
-    function transfer(address _to, uint256 _value) public returns (bool);
-}
-
-/**
    @title FutureTokenSaleLockBox
    @notice Holds tokens reserved for future token sales. Tokens cannot be transferred for at least six months.
 */
@@ -36,12 +29,12 @@ contract FutureTokenSaleLockBox is Owned {
     using SafeMath for uint256;
 
     // To enable transfers of tokens held by this contract
-    TokenInterface public simpleToken;
+    ERC20Interface public simpleToken;
 
-    // To determine earliest unlock date (six months) after which tokens held by this contract can be transferred
+    // To determine earliest unlock date after which tokens held by this contract can be transferred
     TokenSaleInterface public tokenSale;
 
-    // The unlock date is initially six months after tokenSale.endTime, but may be extended
+    // The unlock date is initially 26 weeks after tokenSale.endTime, but may be extended
     uint256 public unlockDate;
 
     event UnlockDateExtended(uint256 _newDate);
@@ -52,7 +45,7 @@ contract FutureTokenSaleLockBox is Owned {
        @param _simpleToken SimpleToken contract
        @param _tokenSale TokenSale contract
     */
-    function FutureTokenSaleLockBox(TokenInterface _simpleToken, TokenSaleInterface _tokenSale)
+    function FutureTokenSaleLockBox(ERC20Interface _simpleToken, TokenSaleInterface _tokenSale)
              Owned()
              public
     {
@@ -72,7 +65,7 @@ contract FutureTokenSaleLockBox is Owned {
        @dev Limits execution to after unlock date
     */
     modifier onlyAfterUnlockDate() {
-        require(hasUnlockDatePassed() == true);
+        require(hasUnlockDatePassed());
         _;
     }
 
