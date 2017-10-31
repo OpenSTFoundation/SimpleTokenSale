@@ -12,11 +12,7 @@ const Utils = require('./lib/utils.js')
 // Add Presales
 //     calls as non-owner
 //     calls as owner and unlocked
-//
-//     With OK presales
-//         calls as owner and locked
-//     With !OK presales
-//         calls as owner and locked
+//     calls as owner and locked
 
 
 contract('Presales', function(accounts) {
