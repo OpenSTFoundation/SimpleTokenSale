@@ -70,6 +70,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
 
     using SafeMath for uint256;
 
+
     // We keep track of whether the sale has been finalized, at which point
     // no additional contributions will be permitted.
     bool public finalized;
@@ -154,7 +155,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
     }
 
 
-    // Initialize is called to link the sale token with the token contract.
+    // Initialize is called to check some configuration parameters.
     // It expects that a certain amount of tokens have already been assigned to the sale contract address.
     function initialize() external onlyOwner returns (bool) {
         require(totalTokensSold == 0);
@@ -190,9 +191,9 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
 
 
 
-   //
-   // TIME
-   //
+    //
+    // TIME
+    //
 
     function currentTime() public view returns (uint256 _currentTime) {
         return now;
@@ -234,7 +235,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
     function updateWhitelist(address _account, uint8 _phase) external onlyOps returns (bool) {
         require(_account != address(0));
         require(_phase <= 2);
-        require(hasSaleEnded() == false);
+        require(!finalized);
 
         whitelist[_account] = _phase;
 
@@ -307,7 +308,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
 
         require(tokensMax > 0);
 
-        uint256 tokensBought = msg.value.mul(tokensPerKEther).div(10**(18 - uint256(TOKEN_DECIMALS) + 3));
+        uint256 tokensBought = msg.value.mul(tokensPerKEther).div(PURCHASE_DIVIDER);
         require(tokensBought > 0);
 
         uint256 cost = msg.value;
@@ -318,7 +319,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
             tokensBought = tokensMax;
 
             // Calculate actual cost for partial amount of tokens.
-            cost = tokensBought.mul(10**(18 - uint256(TOKEN_DECIMALS) + 3)).div(tokensPerKEther);
+            cost = tokensBought.mul(PURCHASE_DIVIDER).div(tokensPerKEther);
 
             // Calculate refund for contributor.
             refund = msg.value.sub(cost);
@@ -434,7 +435,10 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
     function reclaimTokens() external onlyAdmin returns (bool) {
         uint256 ownBalance = tokenContract.balanceOf(address(this));
 
-        require(tokenContract.transfer(owner, ownBalance));
+        address tokenOwner = tokenContract.owner();
+        require(tokenOwner != address(0));
+
+        require(tokenContract.transfer(tokenOwner, ownBalance));
 
         TokensReclaimed(ownBalance);
 
@@ -443,7 +447,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
 
 
     // Allows the admin to finalize the sale and complete allocations.
-    // The owner will also need to finalize the token contract so that
+    // The admin will also need to finalize the token contract so that
     // token transfers are enabled.
     function finalize() external onlyAdmin returns (bool) {
         return finalizeInternal();
