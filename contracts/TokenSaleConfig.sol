@@ -38,4 +38,9 @@ contract TokenSaleConfig is SimpleTokenConfig {
     // For the public sale, tokens are priced at 0.0833 USD/token.
     // So if we have 300 USD/ETH -> 300,000 USD/KETH / 0.0833 USD/token = ~3,600,000
     uint256 public constant TOKENS_PER_KETHER         = 3600000;
+
+    // Constant used by buyTokens as part of the cost <-> tokens conversion.
+    // 18 for ETH -> WEI, TOKEN_DECIMALS (18 for Simple Token), 3 for the K in tokensPerKEther.
+    uint256 public constant PURCHASE_DIVIDER          = 10**(uint256(18) - TOKEN_DECIMALS + 3);
+
 }

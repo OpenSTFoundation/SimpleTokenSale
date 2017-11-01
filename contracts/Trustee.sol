@@ -112,7 +112,7 @@ contract Trustee is OpsManaged {
         require(_account != address(this));
         require(_amount > 0);
 
-        // Can't create an allocation if there is already one for this acount.
+        // Can't create an allocation if there is already one for this account.
         require(allocations[_account].amountGranted == 0);
 
         if (isOps(msg.sender)) {
@@ -156,18 +156,13 @@ contract Trustee is OpsManaged {
     }
 
 
-    // Push model which allows the owner to transfer tokens to the beneficiary.
-    // The exact amount to transfer is calculated by owner based on agreements with
+    // Push model which allows ops to transfer tokens to the beneficiary.
+    // The exact amount to transfer is calculated based on agreements with
     // the beneficiaries. Here we only restrict that the total amount transfered cannot
     // exceed what has been granted.
     function processAllocation(address _account, uint256 _amount) external onlyOps returns (bool) {
         require(_account != address(0));
         require(_amount > 0);
-
-        if (!tokenContract.finalized()) {
-            // We don't allow ops to process allocations before the token contract has been finalized.
-            require(isOwner(msg.sender) || isAdmin(msg.sender));
-        }
 
         Allocation storage allocation = allocations[_account];
 
@@ -176,7 +171,7 @@ contract Trustee is OpsManaged {
         uint256 transferable = allocation.amountGranted.sub(allocation.amountTransferred);
 
         if (transferable < _amount) {
-            return false;
+           return false;
         }
 
         allocation.amountTransferred = allocation.amountTransferred.add(_amount);
@@ -203,7 +198,10 @@ contract Trustee is OpsManaged {
 
         uint256 amountReclaimed = ownBalance.sub(totalLocked);
 
-        require(tokenContract.transfer(owner, amountReclaimed));
+        address tokenOwner = tokenContract.owner();
+        require(tokenOwner != address(0));
+
+        require(tokenContract.transfer(tokenOwner, amountReclaimed));
 
         TokensReclaimed(amountReclaimed);
 
