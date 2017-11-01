@@ -40,7 +40,7 @@ contract TokenSaleConfig is SimpleTokenConfig {
     uint256 public constant TOKENS_PER_KETHER         = 3600000;
 
     // Constant used by buyTokens as part of the cost <-> tokens conversion.
-    // 18 for ETH -> WEI, TOKEN_DECIMALS (8 for Simple Token), 3 for the K in tokensPerKEther.
+    // 18 for ETH -> WEI, TOKEN_DECIMALS (18 for Simple Token), 3 for the K in tokensPerKEther.
     uint256 public constant PURCHASE_DIVIDER          = 10**(uint256(18) - TOKEN_DECIMALS + 3);
 
 }
