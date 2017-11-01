@@ -447,8 +447,8 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
 
 
     // Allows the admin to finalize the sale and complete allocations.
-    // The admin will also need to finalize the token contract so that
-    // token transfers are enabled.
+    // The SimpleToken.admin also needs to finalize the token contract
+    // so that token transfers are enabled.
     function finalize() external onlyAdmin returns (bool) {
         return finalizeInternal();
     }
