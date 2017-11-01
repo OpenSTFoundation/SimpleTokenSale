@@ -1,10 +1,10 @@
 pragma solidity ^0.4.17;
 
 // ----------------------------------------------------------------------------
-// Simple Token - Future Token Sale Lock Box
+// Future Token Sale Lock Box
 //
-// Copyright (c) 2017 Simple Token.
-// http://www.simpletoken.com/
+// Copyright (c) 2017 OpenST Ltd.
+// https://simpletoken.org/
 //
 // The MIT Licence.
 // ----------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 pragma solidity ^0.4.17;
 
 // ----------------------------------------------------------------------------
-// Simple Token - Presales for TokenSale
+// Presales for TokenSale
 //
-// Copyright (c) 2017 OpenST Foundation
-// http://www.simpletoken.org/
+// Copyright (c) 2017 OpenST Ltd.
+// https://simpletoken.org/
 //
 // The MIT Licence.
 // ----------------------------------------------------------------------------
