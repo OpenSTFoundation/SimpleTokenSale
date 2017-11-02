@@ -140,8 +140,8 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
         require(PHASE1_ACCOUNT_TOKENS_MAX > 0);
 
         // Basic check that the constants add up to TOKENS_MAX
-        uint256 partialAllocations = TOKENS_FOUNDERS.add(TOKENS_ADVISORS).add(TOKENS_EARLY_INVESTORS);
-        require(partialAllocations.add(TOKENS_SALE).add(TOKENS_ACCELERATOR_MAX).add(TOKENS_FUTURE) == TOKENS_MAX);
+        uint256 partialAllocations = TOKENS_FOUNDERS.add(TOKENS_ADVISORS).add(TOKENS_EARLY_BACKERS);
+        require(partialAllocations.add(TOKENS_SALE).add(TOKENS_ACCELERATOR).add(TOKENS_FUTURE) == TOKENS_MAX);
 
         wallet                 = _wallet;
         pausedTime             = 0;

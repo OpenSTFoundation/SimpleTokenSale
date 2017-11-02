@@ -60,9 +60,9 @@ contract('TokenSale', function(accounts) {
    const TOKENS_SALE               = new BigNumber('240000000').mul(DECIMALSFACTOR)
    const TOKENS_FOUNDERS           = new BigNumber('80000000').mul(DECIMALSFACTOR)
    const TOKENS_ADVISORS           = new BigNumber('80000000').mul(DECIMALSFACTOR)
-   const TOKENS_EARLY_INVESTORS    = new BigNumber('22441966').mul(DECIMALSFACTOR)
-   const TOKENS_ACCELERATOR_MAX    = new BigNumber('257558034').mul(DECIMALSFACTOR)
-   const TOKENS_FUTURE             = new BigNumber('120000000').mul(DECIMALSFACTOR)
+   const TOKENS_EARLY_BACKERS      = new BigNumber('44884831').mul(DECIMALSFACTOR)
+   const TOKENS_ACCELERATOR        = new BigNumber('217600000').mul(DECIMALSFACTOR)
+   const TOKENS_FUTURE             = new BigNumber('137515169').mul(DECIMALSFACTOR)
 
    const TOKENS_PER_KETHER         = new BigNumber('3600000')
 

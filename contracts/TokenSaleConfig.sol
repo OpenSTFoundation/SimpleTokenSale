@@ -29,9 +29,9 @@ contract TokenSaleConfig is SimpleTokenConfig {
     uint256 public constant TOKENS_SALE               = 240000000 * DECIMALSFACTOR;
     uint256 public constant TOKENS_FOUNDERS           = 80000000  * DECIMALSFACTOR;
     uint256 public constant TOKENS_ADVISORS           = 80000000  * DECIMALSFACTOR;
-    uint256 public constant TOKENS_EARLY_INVESTORS    = 22441966  * DECIMALSFACTOR;
-    uint256 public constant TOKENS_ACCELERATOR_MAX    = 257558034 * DECIMALSFACTOR;
-    uint256 public constant TOKENS_FUTURE             = 120000000 * DECIMALSFACTOR;
+    uint256 public constant TOKENS_EARLY_BACKERS      = 44884831  * DECIMALSFACTOR;
+    uint256 public constant TOKENS_ACCELERATOR        = 217600000 * DECIMALSFACTOR;
+    uint256 public constant TOKENS_FUTURE             = 137515169 * DECIMALSFACTOR;
 
     // We use a default for when the contract is deployed but this can be changed afterwards
     // by calling the setTokensPerKEther function
