@@ -117,6 +117,20 @@ contract Presales is Owned {
 	}
 
     /**
+       @dev Returns addresses of accounts
+    */
+	function getAccounts() public view returns (address[]) {
+		return accounts;
+	}
+
+    /**
+       @dev Returns number of accounts
+    */
+	function getAccountsSize() public view returns (uint256) {
+		return accounts.length;
+	}
+
+    /**
        @dev Sets status to Locked so that no new presales can be added
     */
 	function lock() public onlyOwner onlyIfUnlocked returns (bool) {
