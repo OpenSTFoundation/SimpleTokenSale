@@ -116,6 +116,20 @@ contract GrantableAllocations is Owned {
 	}
 
     /**
+       @dev Returns addresses of grantees
+    */
+	function getGrantees() public view returns (address[]) {
+		return grantees;
+	}
+
+    /**
+       @dev Returns number of grantees
+    */
+	function getGranteesSize() public view returns (uint256) {
+		return grantees.length;
+	}
+
+    /**
        @dev Sets status to Locked so that no new grantable allocations can be added
     */
 	function lock() public onlyOwner onlyIfUnlocked returns (bool) {
