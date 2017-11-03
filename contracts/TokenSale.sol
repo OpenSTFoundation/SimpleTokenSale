@@ -221,7 +221,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
         // and endtime has past, then sale has ended
         } else if (pausedTime == 0 && currentTime() >= endTime) {
             return true;
-        // otherwise it not past and not paused; or paused
+        // otherwise it is not past and not paused; or paused
         // and as such not ended
         } else {
             return false;
@@ -242,7 +242,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
     function updateWhitelist(address _account, uint8 _phase) external onlyOps returns (bool) {
         require(_account != address(0));
         require(_phase <= 2);
-        require(!finalized);
+        require(!hasSaleEnded());
 
         whitelist[_account] = _phase;
 
