@@ -39,6 +39,8 @@ contract Owned {
 
 
     function initiateOwnershipTransfer(address _proposedOwner) public onlyOwner returns (bool) {
+        require(_proposedOwner != address(0));
+
         proposedOwner = _proposedOwner;
 
         OwnershipTransferInitiated(_proposedOwner);
@@ -55,6 +57,14 @@ contract Owned {
 
         OwnershipTransferCompleted(owner);
 
+        return true;
+    }
+
+
+    function cancelOwnershipTransfer() public onlyOwner returns (bool) {
+        if (proposedOwner == address(0)) return false;
+        
+        proposedOwner = address(0);
         return true;
     }
 }
