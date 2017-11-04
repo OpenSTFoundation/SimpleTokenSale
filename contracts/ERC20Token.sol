@@ -99,6 +99,10 @@ contract ERC20Token is ERC20Interface, Owned {
     }
 
 
+    /*
+     * Note that when changing the approved allowance for a spender the sender should
+     * first check that the allowance for the spender is zero.
+     */
     function approve(address _spender, uint256 _value) public returns (bool success) {
 
         allowed[msg.sender][_spender] = _value;
