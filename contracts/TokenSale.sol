@@ -214,11 +214,18 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
 
 
     function hasSaleEnded() private view returns (bool) {
-        if (totalTokensSold >= TOKENS_SALE || currentTime() >= endTime || finalized) {
+        // if sold out or finalized, sale has ended
+        if (totalTokensSold >= TOKENS_SALE || finalized) {
             return true;
+        // else if sale is not paused (pausedTime = 0) 
+        // and endtime has past, then sale has ended
+        } else if (pausedTime == 0 && currentTime() >= endTime) {
+            return true;
+        // otherwise it is not past and not paused; or paused
+        // and as such not ended
+        } else {
+            return false;
         }
-
-        return false;
     }
 
 
@@ -235,7 +242,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
     function updateWhitelist(address _account, uint8 _phase) external onlyOps returns (bool) {
         require(_account != address(0));
         require(_phase <= 2);
-        require(!finalized);
+        require(!hasSaleEnded());
 
         whitelist[_account] = _phase;
 
