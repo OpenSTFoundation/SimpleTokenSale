@@ -38,6 +38,10 @@ var TokenSale   = artifacts.require("./TokenSale.sol")
 //    - reclaimTokens after finalize
 //    - reclaimTokens when 0 balance
 //
+// burnUnsoldTokens
+//    - burnUnsoldTokens before finalize
+//    - burnUnsoldTokens after finalize
+//
 
 contract('TokenSale', function(accounts) {
 
@@ -401,14 +405,13 @@ contract('TokenSale', function(accounts) {
             const balance0Before = await token.balanceOf(accounts[0])
             const balanceSaleBefore = await token.balanceOf(sale.address)
 
-            assert.equal(await sale.reclaimTokens.call({ from: admin }), true)
-            Utils.checkTokensReclaimedEventGroup(await sale.reclaimTokens({ from: admin }), balanceSaleBefore)
+            await Utils.expectThrow(sale.reclaimTokens(balanceSaleBefore, { from: admin }))
 
             const balance0After = await token.balanceOf(accounts[0])
             const balanceSaleAfter = await token.balanceOf(sale.address)
 
-            assert.equal(balance0After.sub(balance0Before).toNumber(), balanceSaleBefore)
-            assert.equal(balanceSaleAfter.sub(balanceSaleBefore).toNumber(), balanceSaleBefore.mul(-1))
+            assert.equal(balance0After.sub(balance0Before).toNumber(), 0)
+            assert.equal(balanceSaleAfter.sub(balanceSaleBefore).toNumber(), 0)
          })
       })
 
@@ -434,8 +437,8 @@ contract('TokenSale', function(accounts) {
             const balance0Before = await token.balanceOf(accounts[0])
             const balanceSaleBefore = await token.balanceOf(sale.address)
 
-            assert.equal(await sale.reclaimTokens.call({ from: admin }), true)
-            Utils.checkTokensReclaimedEventGroup(await sale.reclaimTokens({ from: admin }), balanceSaleBefore)
+            assert.equal(await sale.reclaimTokens.call(balanceSaleBefore, { from: admin }), true)
+            Utils.checkTokensReclaimedEventGroup(await sale.reclaimTokens(balanceSaleBefore, { from: admin }), balanceSaleBefore)
 
             const balance0After = await token.balanceOf(accounts[0])
             const balanceSaleAfter = await token.balanceOf(sale.address)
@@ -448,7 +451,66 @@ contract('TokenSale', function(accounts) {
             const balanceSaleBefore = await token.balanceOf(sale.address)
             assert.equal(balanceSaleBefore, 0)
 
-            assert.equal(await sale.reclaimTokens.call({ from: admin }), true)
+            assert.equal(await sale.reclaimTokens.call(balanceSaleBefore, { from: admin }), true)
+         })
+      })
+   })
+
+   describe('burnUnsoldTokens', async () => {
+
+      var token   = null
+      var trustee = null
+      var sale    = null
+
+      context('before finalize', async () => {
+         before(async () => {
+            var contracts = await Utils.deployContracts(artifacts, accounts)
+
+            token   = contracts.token
+            trustee = contracts.trustee
+            sale    = contracts.sale
+
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+         })
+
+         it("burnUnsoldTokens before finalize", async () => {
+            const balanceSaleBefore = await token.balanceOf(sale.address)
+
+            await Utils.expectThrow(sale.burnUnsoldTokens({ from: admin }))
+
+            const balanceSaleAfter = await token.balanceOf(sale.address)
+
+            assert.equal(balanceSaleAfter.sub(balanceSaleBefore).toNumber(), 0)
+         })
+      })
+
+
+      context('after finalize', async () => {
+         before(async () => {
+            var contracts = await Utils.deployContracts(artifacts, accounts)
+
+            token   = contracts.token
+            trustee = contracts.trustee
+            sale    = contracts.sale
+
+            await sale.setAdminAddress(admin)
+            await sale.setOpsAddress(ops)
+            await token.setAdminAddress(admin)
+         })
+
+
+         it("burnUnsoldTokens after finalize", async () => {
+            await sale.finalize({ from: admin })
+
+            const balanceSaleBefore = await token.balanceOf(sale.address)
+
+            assert.equal(await sale.burnUnsoldTokens.call({ from: admin }), true)
+            Utils.checkUnsoldTokensBurntEventGroup(await sale.burnUnsoldTokens({ from: admin }), balanceSaleBefore)
+
+            const balanceSaleAfter = await token.balanceOf(sale.address)
+
+            assert.equal(balanceSaleAfter.sub(balanceSaleBefore).toNumber(), balanceSaleBefore.mul(-1))
          })
       })
    })

@@ -14,7 +14,7 @@ var Moment = require('moment')
 //    calls transfer as non-owner
 
 contract('FutureTokenSaleLockBox', function(accounts) {
-    const END_TIME   = 1511269199 // 2017-11-21, 12:59:59 UTC
+    const END_TIME   = 1512133199; // 2017-12-01, 12:59:59 UTC
     const SIX_MONTHS = 60 * 60 * 24 * 7 * 26
 
     describe('extendUnlockDate function', async () => {

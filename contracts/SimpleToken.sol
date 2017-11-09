@@ -39,6 +39,7 @@ contract SimpleToken is ERC20Token, OpsManaged, SimpleTokenConfig {
 
 
     // Events
+    event Burnt(address indexed _from, uint256 _amount);
     event Finalized();
 
 
@@ -77,6 +78,19 @@ contract SimpleToken is ERC20Token, OpsManaged, SimpleTokenConfig {
         // We also allow someone to send tokens back to the owner. This is useful among other
         // cases, for the Trustee to transfer unlocked tokens back to the owner (reclaimTokens).
         require(isOwnerOrOps(_sender) || _to == owner);
+    }
+
+    // Implement a burn function to permit msg.sender to reduce its balance
+    // which also reduces tokenTotalSupply
+    function burn(uint256 _value) public returns (bool success) {
+        require(_value <= balances[msg.sender]);
+
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        tokenTotalSupply = tokenTotalSupply.sub(_value);
+
+        Burnt(msg.sender, _value);
+
+        return true;
     }
 
 

@@ -458,12 +458,37 @@ module.exports.checkTokensReclaimedEventGroup = (result, _amount) => {
 }
 
 
+module.exports.checkUnsoldTokensBurntEventGroup = (result, _amount) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   if (Number.isInteger(_amount)) {
+      _amount = new BigNumber(_amount)
+   }
+
+   assert.equal(event.event, "UnsoldTokensBurnt")
+   assert.equal(event.args._amount.toNumber(), _amount.toNumber())
+}
+
+
 module.exports.checkFinalizedEventGroup = (result) => {
    assert.equal(result.logs.length, 1)
 
    const event = result.logs[0]
 
    assert.equal(event.event, "Finalized")
+}
+
+
+module.exports.checkBurntEventGroup = (result, _from, _value) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   assert.equal(event.event, "Burnt")
+   assert.equal(event._from, _from)
+   assert.equal(event._value, _value)
 }
 
 

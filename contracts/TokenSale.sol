@@ -63,6 +63,7 @@ import "./SafeMath.sol";
 // addPresale                                x
 // pause / unpause                           x
 // reclaimTokens                             x
+// burnUnsoldTokens                          x
 // finalize                                  x
 //
 
@@ -118,11 +119,12 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
     event Initialized();
     event PresaleAdded(address indexed _account, uint256 _baseTokens, uint256 _bonusTokens);
     event WhitelistUpdated(address indexed _account, uint8 _phase);
-    event TokensPurchased(address indexed _beneficiary, uint256 _cost, uint256 _tokens);
+    event TokensPurchased(address indexed _beneficiary, uint256 _cost, uint256 _tokens, uint256 _totalSold);
     event TokensPerKEtherUpdated(uint256 _amount);
     event Phase1AccountTokensMaxUpdated(uint256 _tokens);
     event WalletChanged(address _newWallet);
     event TokensReclaimed(uint256 _amount);
+    event UnsoldTokensBurnt(uint256 _amount);
     event Finalized();
 
 
@@ -209,6 +211,12 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
 
     modifier onlyDuringSale() {
         require(hasSaleEnded() == false && currentTime() >= PHASE1_START_TIME);
+        _;
+    }
+
+    modifier onlyAfterSale() {
+        // require finalized is stronger than hasSaleEnded
+        require(finalized);
         _;
     }
 
@@ -345,7 +353,7 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
         // Transfer the contribution to the wallet
         wallet.transfer(msg.value.sub(refund));
 
-        TokensPurchased(msg.sender, cost, tokensBought);
+        TokensPurchased(msg.sender, cost, tokensBought, totalTokensSold);
 
         // If all tokens available for sale have been sold out, finalize the sale automatically.
         if (totalTokensSold == TOKENS_SALE) {
@@ -437,17 +445,32 @@ contract TokenSale is OpsManaged, Pausable, TokenSaleConfig { // Pausable is als
     }
 
 
-    // Allows the admin to reclaim all tokens assigned to the sale contract.
-    // This should only be used in case of emergency.
-    function reclaimTokens() external onlyAdmin returns (bool) {
+    // Allows the admin to move bonus tokens still available in the sale contract
+    // out before burning all remaining unsold tokens in burnUnsoldTokens().
+    // Used to distribute bonuses to token sale participants when the sale has ended
+    // and all bonuses are known.
+    function reclaimTokens(uint256 _amount) external onlyAfterSale onlyAdmin returns (bool) {
         uint256 ownBalance = tokenContract.balanceOf(address(this));
-
+        require(_amount <= ownBalance);
+        
         address tokenOwner = tokenContract.owner();
         require(tokenOwner != address(0));
 
-        require(tokenContract.transfer(tokenOwner, ownBalance));
+        require(tokenContract.transfer(tokenOwner, _amount));
 
-        TokensReclaimed(ownBalance);
+        TokensReclaimed(_amount);
+
+        return true;
+    }
+
+
+    // Allows the admin to burn all unsold tokens in the sale contract.
+    function burnUnsoldTokens() external onlyAfterSale onlyAdmin returns (bool) {
+        uint256 ownBalance = tokenContract.balanceOf(address(this));
+
+        require(tokenContract.burn(ownBalance));
+
+        UnsoldTokensBurnt(ownBalance);
 
         return true;
     }

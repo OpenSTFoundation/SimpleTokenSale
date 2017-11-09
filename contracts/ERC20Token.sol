@@ -24,7 +24,7 @@ contract ERC20Token is ERC20Interface, Owned {
     string  private tokenName;
     string  private tokenSymbol;
     uint8   private tokenDecimals;
-    uint256 private tokenTotalSupply;
+    uint256 internal tokenTotalSupply;
 
     mapping(address => uint256) balances;
     mapping(address => mapping (address => uint256)) allowed;
@@ -107,4 +107,5 @@ contract ERC20Token is ERC20Interface, Owned {
 
         return true;
     }
+
 }
