@@ -52,7 +52,7 @@ contract('TokenSale', function(accounts) {
 
    const PHASE1_START_TIME         = 1510664400 // 2017-11-14, 13:00:00 UTC
    const PHASE2_START_TIME         = 1510750800 // 2017-11-15, 13:00:00 UTC
-   const END_TIME                  = 1511269199 // 2017-11-21, 12:59:59 UTC
+   const END_TIME                  = 1512133199; // 2017-12-01, 12:59:59 UTC
    const CONTRIBUTION_MIN          = web3.toWei(0.1, "ether")
    const CONTRIBUTION_MAX          = web3.toWei("10000", "ether")
 

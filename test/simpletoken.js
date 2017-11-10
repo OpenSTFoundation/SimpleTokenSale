@@ -53,6 +53,10 @@ const SimpleToken = artifacts.require("./SimpleToken.sol")
 // allowance
 //    * covered indirectly by testing the other functions
 //
+// burn
+//    burn greater than balance
+//    burn less than or equal to balance
+//
 // balances
 //    check if balances is exposed publicly
 //
@@ -442,6 +446,35 @@ contract('SimpleToken', (accounts) => {
 
       it("try to finalize a 2nd time", async () => {
          await Utils.expectThrow(token.finalize.call({ from: admin }))
+      })
+   })
+
+
+   describe('burn function', async () => {
+
+      var token = null
+
+      before(async () => {
+         token = await createToken()
+
+         await token.setOpsAddress(ops)
+         await token.setAdminAddress(admin)
+      })
+
+      it("burn greater than balance", async () => {
+         await Utils.expectThrow(token.burn.call((TOTAL_SUPPLY.plus(1)), { from: accounts[0] }))
+      })
+
+      it("burn less than or equal to balance", async () => {
+         const balanceBefore = await token.balanceOf(accounts[0])
+
+         Utils.checkBurntEventGroup(await token.burn(1000, { from: accounts[0] }))
+
+         const currentBalance = await token.balanceOf(accounts[0])
+         const currentSupply = await token.totalSupply.call()
+
+         assert.equal(balanceBefore.minus(currentBalance).toNumber(), 1000)
+         assert.equal(TOTAL_SUPPLY.minus(currentSupply).toNumber(), 1000)
       })
    })
 })

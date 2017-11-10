@@ -269,7 +269,7 @@ contract('All Contracts', function(accounts) {
          assert.equal(saleTokenBalance, 0)
 
          const ownerBalanceBefore = await token.balanceOf(saleOwner)
-         const o = await sale.reclaimTokens({ from: admin })
+         const o = await sale.reclaimTokens(ownerBalanceBefore, { from: admin })
          logReceipt(o.receipt, "TokenSale.reclaimTokens")
 
          const ownerBalanceAfter = await token.balanceOf(saleOwner)
