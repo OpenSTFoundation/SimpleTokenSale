@@ -148,6 +148,17 @@ module.exports.deployGrantableAllocations = async (artifacts, accounts) => {
 }
 
 
+module.exports.deployProcessables = async (artifacts, accounts) => {
+   var Processables     = artifacts.require("./ProcessablesMock.sol")
+
+   const processables  = await Processables.new({ from: accounts[0], gas: 3500000 })
+
+   return {
+      processables   : processables
+   }
+}
+
+
 module.exports.changeTime = async (sale, newTime) => {
    await sale.changeTime(newTime)
 };
@@ -280,6 +291,12 @@ module.exports.checkPresaleAddedToPresalesEvent = (event, _account, _baseTokens,
 }
 
 
+module.exports.checkLockedEvent = (result) => {
+   assert.equal(result.logs.length, 1)
+
+   assert.equal(result.logs[0].event, "Locked")
+}
+
 module.exports.checkLockedEventGroup = (result) => {
    assert.equal(result.logs.length, 2)
 
@@ -288,6 +305,27 @@ module.exports.checkLockedEventGroup = (result) => {
 
    assert.equal(ownershipEvent.event, "OwnershipTransferInitiated")
    assert.equal(lockedEvent.event, "Locked")
+}
+
+
+module.exports.checkApprovedEvent = (result) => {
+   assert.equal(result.logs.length, 1)
+
+   assert.equal(result.logs[0].event, "Approved")
+}
+
+
+module.exports.checkCompletedEvent = (result) => {
+   assert.equal(result.logs.length, 1)
+
+   assert.equal(result.logs[0].event, "Completed")
+}
+
+
+module.exports.checkDisapprovedEvent = (result) => {
+   assert.equal(result.logs.length, 1)
+
+   assert.equal(result.logs[0].event, "Disapproved")
 }
 
 
