@@ -15,7 +15,7 @@ import "./Processables.sol";
 /// @dev Implements process function and wraps private functions to enable testing Processables
 contract ProcessablesMock is Processables {
 	function ProcessablesMock()
-			Processables(address(0))
+			Processables()
 			public { }
 
 	/// @dev Public wrapper for addAddress
@@ -32,10 +32,10 @@ contract ProcessablesMock is Processables {
 	/// @param _from from
 	function process(uint256 _from)
 			public
-			returns (uint256 to)
+			returns (bool result)
 	{
 		_from;
-		return to;
+		return result;
 	}
 
 	/// @dev Public wrapper for approveInternal
@@ -48,11 +48,11 @@ contract ProcessablesMock is Processables {
 	}
 
 	/// @dev Public wrapper for completeInternal
-	function complete()
+	function completePublic()
 			public
 			returns (bool result)
 	{
-		result = completeInternal();
+		result = complete();
 		return result;
 	}
 

@@ -159,6 +159,25 @@ module.exports.deployProcessables = async (artifacts, accounts) => {
 }
 
 
+module.exports.deployBonuses = async (artifacts, accounts) => {
+   var Bonuses   = artifacts.require("./Bonuses.sol")
+
+   const token   = await SimpleToken.new({ from: accounts[1] })
+   const bonuses = await Bonuses.new(token.address, { from: accounts[0], gas: 3500000 })
+
+   // Only the Admin key can call finalize
+   await token.setAdminAddress(accounts[2], { from: accounts[1] })
+
+   // Token must be finalized for Bonuses to process bonuses (via transferFrom)
+   await token.finalize({ from: accounts[2] })
+
+   return {
+      token   : token,
+      bonuses : bonuses
+   }
+}
+
+
 module.exports.changeTime = async (sale, newTime) => {
    await sale.changeTime(newTime)
 };
@@ -382,6 +401,22 @@ module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount,
    assert.equal(event.args._amount.toNumber(), _amount.toNumber())
    assert.equal(event.args._revokable, _revokable)
 }
+
+
+module.exports.checkBonusEventGroup = (result, eventName, _address, _amount) => {
+   assert.equal(result.logs.length, 1)
+
+   const event = result.logs[0]
+
+   if (Number.isInteger(_amount)) {
+      _amount = new BigNumber(_amount)
+   }
+
+   assert.equal(event.event, eventName)
+   assert.equal(event.args._address, _address)
+   assert.equal(event.args._amount.toNumber(), _amount.toNumber())
+}
+
 
 module.exports.checkApprovalEventGroup = (result, _owner, _spender, _value) => {
    assert.equal(result.logs.length, 1)

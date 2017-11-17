@@ -9,8 +9,6 @@ pragma solidity ^0.4.17;
 // The MIT Licence.
 // ----------------------------------------------------------------------------
 
-import "./SafeMath.sol";
-
 /// @title Processables
 /// @dev Abstract contract to be inherited by operations contracts that aid certain transfers related to the token sale
 contract Processables {
@@ -18,9 +16,6 @@ contract Processables {
 
 	// Address that creates and administers this contract
 	address public owner;
-
-	// Contract called by process
-	address public callee;
 
 	// Count of successful process iterations
 	uint256 public totalProcessed;
@@ -44,12 +39,6 @@ contract Processables {
 	// limits execution to owner
 	modifier onlyOwner() {
         require(msg.sender == owner);
-        _;
-    }
-
-	// limits execution to representative of callee (e.g., callee.owner)
-	modifier onlyCalleeRep(address _representative) {
-        require(msg.sender == _representative);
         _;
     }
 
@@ -79,12 +68,10 @@ contract Processables {
 	}
 
 	/// @dev Constructor
-	/// @param _callee callee
-	function Processables(address _callee)
+	function Processables()
 			public
 	{
 		owner = msg.sender;
-		callee = _callee;		
 	}
 
 	/// @dev Adds address to addresses
@@ -140,7 +127,7 @@ contract Processables {
 
 	/// @dev Sets status to Completed, to be called by inheriting contracts with access control
 	/// @return true
-	function completeInternal()
+	function complete()
 			internal
 			onlyIfApproved
 			returns (bool result)
@@ -169,5 +156,5 @@ contract Processables {
 	/// @dev Interface for processing processables to be implemented by inheriting contracts
 	/// @param _from index of address at which to begin processing 	
 	/// @return index of final address processed
-	function process(uint256 _from) public returns (uint256 to);
+	function process(uint256 _from) public returns (bool result);
 }

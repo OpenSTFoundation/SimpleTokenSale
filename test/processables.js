@@ -11,7 +11,7 @@ const Utils = require('./lib/utils.js')
 // 		fails to approve when unlocked
 // 		approves when locked
 // 		fails to approve when approved
-// CompleteInternal
+// Complete
 // 		fails to complete when locked
 // 		completes when approved
 // 		fails to complete when completed
@@ -19,7 +19,6 @@ const Utils = require('./lib/utils.js')
 //		fails to disapprove when unlocked
 //		disapproves when locked
 //		fails to disapprove when disapproved
-// 
 //		when approved
 // 			disapproves when approved
 //		when completed
@@ -50,9 +49,9 @@ contract('Processables', function(accounts) {
     		addresses.push(accounts[0])
             assert.equal(await processables.addPublic.call(accounts[0], { from: accounts[1] }), true);
             await processables.addPublic(accounts[0], { from: accounts[0] });
-            var resultAddresses = await processables.getAddresses();
+            resultAddresses = await processables.getAddresses();
             assert.equal(resultAddresses.toString(), addresses.toString());
-            var size = await processables.getAddressesSize();
+            size = await processables.getAddressesSize();
             assert.equal(size.toNumber(), 2);
     	})
     })
@@ -72,10 +71,14 @@ contract('Processables', function(accounts) {
 		})
 
 		it ('locks as owner when unlocked with 1 address', async () => {
+			var status = await processables.status.call();
+			assert.equal(status.toNumber(), 0);
+			
             await processables.addPublic(accounts[0], { from: accounts[0] });
             const result = await processables.lock({ from: accounts[0] });
 
-            assert.equal(await processables.status.call({ from: accounts[0] }), 1);
+			status = await processables.status.call();
+			assert.equal(status.toNumber(), 1);
             Utils.checkLockedEvent(result);
 		})
 
@@ -97,9 +100,13 @@ contract('Processables', function(accounts) {
 
 		it ('approves when locked', async () => {
             await processables.lock({ from: accounts[0] });
+			var status = await processables.status.call();
+			assert.equal(status.toNumber(), 1);
+
             const result = await processables.approve({ from: accounts[0] });
 
-            assert.equal(await processables.status.call({ from: accounts[0] }), 2);
+			status = await processables.status.call();
+			assert.equal(status.toNumber(), 2);
             Utils.checkApprovedEvent(result);
 		})
 
@@ -108,7 +115,7 @@ contract('Processables', function(accounts) {
 		})
     })
 
-    describe('completeInternal function', async () => {
+    describe('complete function', async () => {
 		before(async () => {
 	        contracts = await Utils.deployProcessables(artifacts, accounts);
 	        processables = contracts.processables;
@@ -117,19 +124,23 @@ contract('Processables', function(accounts) {
 		})
 
 		it ('fails to complete when locked', async () => {
-            await Utils.expectThrow(processables.complete({ from: accounts[0] }));
+            await Utils.expectThrow(processables.completePublic({ from: accounts[0] }));
 		})
 
 		it ('completes when approved', async () => {
 			await processables.approve({ from: accounts[0] });
-            const result = await processables.complete({ from: accounts[0] });
+			var status = await processables.status.call();
+			assert.equal(status.toNumber(), 2);
 
-            assert.equal(await processables.status.call({ from: accounts[0] }), 3);
+            const result = await processables.completePublic({ from: accounts[0] });
+
+			status = await processables.status.call();
+			assert.equal(status.toNumber(), 3);
             Utils.checkCompletedEvent(result);
 		})
 
 		it ('fails to complete when completed', async () => {
-            await Utils.expectThrow(processables.complete({ from: accounts[0] }));
+            await Utils.expectThrow(processables.completePublic({ from: accounts[0] }));
 		})
     })
 
@@ -146,9 +157,13 @@ contract('Processables', function(accounts) {
 
 		it ('disapproves when locked and incomplete', async () => {
 			await processables.lock({ from: accounts[0] });
+			var status = await processables.status.call();
+			assert.equal(status.toNumber(), 1);
+
             const result = await processables.disapprove({ from: accounts[0] });
 
-            assert.equal(await processables.status.call({ from: accounts[0] }), 4);
+			status = await processables.status.call();
+			assert.equal(status.toNumber(), 4);
             Utils.checkDisapprovedEvent(result);
 		})
 
@@ -166,9 +181,13 @@ contract('Processables', function(accounts) {
 			})
 
 			it ('disapproves', async () => {
+				var status = await processables.status.call();
+				assert.equal(status.toNumber(), 2);
+
 	            const result = await processables.disapprove({ from: accounts[0] });
 
-	            assert.equal(await processables.status.call({ from: accounts[0] }), 4);
+				status = await processables.status.call();
+				assert.equal(status.toNumber(), 4);
 	            Utils.checkDisapprovedEvent(result);
 			})
     	})
@@ -180,7 +199,7 @@ contract('Processables', function(accounts) {
 	            await processables.addPublic(accounts[0], { from: accounts[0] });	        
 				await processables.lock({ from: accounts[0] });
 				await processables.approve({ from: accounts[0] });
-				await processables.complete({ from: accounts[0] });
+				await processables.completePublic({ from: accounts[0] });
 			})
 
 			it ('fails to disapprove', async () => {
