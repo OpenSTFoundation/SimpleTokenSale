@@ -403,11 +403,7 @@ module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount,
 }
 
 
-module.exports.checkBonusEventGroup = (result, eventName, _address, _amount) => {
-   assert.equal(result.logs.length, 1)
-
-   const event = result.logs[0]
-
+module.exports.checkBonusEvent = (event, eventName, _address, _amount) => {
    if (Number.isInteger(_amount)) {
       _amount = new BigNumber(_amount)
    }

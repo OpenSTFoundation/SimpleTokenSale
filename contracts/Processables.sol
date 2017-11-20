@@ -79,7 +79,7 @@ contract Processables {
 	/// @return true
 	function add(address _address)
 			internal
-			returns (bool result)
+			returns(bool result)
 	{
 		addresses.push(_address);
 
@@ -88,11 +88,11 @@ contract Processables {
 
 	/// @dev Returns addresses
 	/// @return addresses array
-	function getAddresses() public view returns (address[]) { return addresses; }
+	function getAddresses() public view returns(address[]) { return addresses; }
 
 	/// @dev Returns size of addresses
 	/// @return size of addresses
-	function getAddressesSize() public view returns (uint256 size) { return addresses.length; }
+	function getAddressesSize() public view returns(uint256 size) { return addresses.length; }
 
 	/// @dev Sets status to Locked
 	/// @return true
@@ -100,7 +100,7 @@ contract Processables {
 			public
 			onlyOwner
 			onlyIfUnlocked
-			returns (bool result)
+			returns(bool result)
 	{
 		require(addresses.length > 0);
 
@@ -116,7 +116,7 @@ contract Processables {
 	function approveInternal()
 			internal
 			onlyIfLocked
-			returns (bool result)
+			returns(bool result)
 	{
 		status = Status.Approved;
 
@@ -130,7 +130,7 @@ contract Processables {
 	function complete()
 			internal
 			onlyIfApproved
-			returns (bool result)
+			returns(bool result)
 	{
 		status = Status.Completed;
 
@@ -144,7 +144,7 @@ contract Processables {
 	function disapproveInternal()
 			internal
 			onlyIfLockedOrApproved
-			returns (bool result)
+			returns(bool result)
 	{
 		status = Status.Disapproved;
 
@@ -156,5 +156,5 @@ contract Processables {
 	/// @dev Interface for processing processables to be implemented by inheriting contracts
 	/// @param _from index of address at which to begin processing 	
 	/// @return index of final address processed
-	function process(uint256 _from) public returns (bool result);
+	function process(uint256 _from) public returns(uint256 to);
 }

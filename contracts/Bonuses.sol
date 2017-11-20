@@ -24,9 +24,6 @@ contract Bonuses is Processables {
 	// Amount of gas sufficient to conduct a single process loop iteration and post-loop operations
 	uint256 public constant PROCESS_GAS_MINIMUM = 100000;
 
-	// Total bonuses amount remaining to process after locking
-	uint256 public remainingTotalBonuses = 0;
-
 	struct Processable {
 		uint256 amount;
 		bool processed;
@@ -35,7 +32,7 @@ contract Bonuses is Processables {
 	SimpleToken public simpleToken;
 
 	event BonusAdded(address indexed _address, uint256 _amount);
-	event BonusProcessed(address indexed _address, uint256 _amount, uint256 _index);
+	event BonusProcessed(address indexed _address, uint256 _amount);
 
 	// limits execution to SimpleToken.owner
 	modifier onlySTOwner() {
@@ -60,7 +57,7 @@ contract Bonuses is Processables {
 			public
 			onlyOwner
 			onlyIfUnlocked
-			returns (bool result)
+			returns(bool)
 	{
 		require(_address != address(0));
 		require(_amount > 0);
@@ -77,23 +74,11 @@ contract Bonuses is Processables {
 		return true;
 	}
 
-	/// @dev Locks this contract
-	function lock()
-			public
-			returns (bool result)
-	{
-		// onlyOwner
-		result = super.lock();
-
-		for (uint256 i = 0; i < addresses.length; i++)
-			remainingTotalBonuses = remainingTotalBonuses.add(processables[addresses[i]].amount);
-	}
-
 	/// @dev Approves this contract
 	function approve()
 			external
 			onlySTOwner
-			returns (bool result)
+			returns(bool)
 	{
 		return approveInternal();
 	}
@@ -102,7 +87,7 @@ contract Bonuses is Processables {
 	function disapprove()
 			external
 			onlySTOwner
-			returns (bool result)
+			returns(bool)
 	{
 		return disapproveInternal();
 	}
@@ -114,35 +99,43 @@ contract Bonuses is Processables {
 			public
 			onlyOwner
 			onlyIfApproved
-			returns (bool result)
+			returns(uint256 to)
 	{
-		// Confirm that this contract is approved to transfer a sufficient amount of ST
+		// Obtain allowance approved for this contract
 		address owner = simpleToken.owner();		
-		require(simpleToken.allowance(owner, address(this)) >= remainingTotalBonuses);
+		uint256 remainingAllowance = simpleToken.allowance(owner, address(this));
+		require(remainingAllowance > 0);
 
-		uint256 startingGas = msg.gas;
+		for(uint256 i = _from; i < addresses.length; i++) {
+			// Break if there is not enough gas for another iteration and post-loop operations or insufficient allowance
+			if(msg.gas < PROCESS_GAS_MINIMUM ||
+			   remainingAllowance < processables[addresses[i]].amount) break;
 
-		// Breaks if there is not enough gas for both a complete iteration and post-loop operations
-		for (uint256 i = _from; i < addresses.length && (block.gaslimit - (startingGas - msg.gas) > PROCESS_GAS_MINIMUM); i++) {
+			to = i;
 			Processable storage processable = processables[addresses[i]];
 
 			// Skip if previously processed
-			if (processable.processed) continue;
+			if(processable.processed) continue;
 
 			require(simpleToken.transferFrom(owner, addresses[i], processable.amount));
 
+			remainingAllowance	  = remainingAllowance.sub(processable.amount);
 			processable.processed = true;
-			remainingTotalBonuses = remainingTotalBonuses.sub(processable.amount);
 
-			BonusProcessed(addresses[i], processable.amount, i);
+			BonusProcessed(addresses[i], processable.amount);
 		}
 
-		if (i == addresses.length && remainingTotalBonuses == 0) {
-			complete();
+		if(to == (addresses.length - 1)) complete();
+	}
 
-			return true;
-		}
-
-		return false;
+	/// @dev Returns remaining total bonuses amount to process
+	/// @return total
+	function remainingTotalBonuses()
+			public
+			view
+			returns(uint256 total)
+	{
+		for(uint256 i = 0; i < addresses.length; i++)
+			if(!processables[addresses[i]].processed) total = total.add(processables[addresses[i]].amount);
 	}
 }

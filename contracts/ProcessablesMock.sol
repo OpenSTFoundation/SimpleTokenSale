@@ -32,10 +32,10 @@ contract ProcessablesMock is Processables {
 	/// @param _from from
 	function process(uint256 _from)
 			public
-			returns (bool result)
+			returns (uint256 to)
 	{
 		_from;
-		return result;
+		return to;
 	}
 
 	/// @dev Public wrapper for approveInternal

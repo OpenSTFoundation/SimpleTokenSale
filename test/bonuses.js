@@ -6,9 +6,6 @@ const BigNumber = require('bignumber.js')
 // 		fails to add as non-owner
 // 		adds as owner when unlocked
 // 		fails to adds as owner when locked
-// Lock
-// 		fails to lock as non-owner
-// 		locks as owner
 // Approve
 // 		fails to approve as non-STOwner
 // 		approves as STOwner
@@ -57,45 +54,23 @@ contract('Bonuses', function(accounts) {
 		})
 
 		it ('adds as owner when unlocked', async () => {
+			var remaining = await bonuses.remainingTotalBonuses.call();
+
             assert.equal(await bonuses.add.call(bonus2.address, bonus2.amount, { from: accounts[0] }), true);
             var result = await bonuses.add(bonus2.address, bonus2.amount, { from: accounts[0] });
-            Utils.checkBonusEventGroup(result, "BonusAdded", bonus2.address, bonus2.amount);
+            Utils.checkBonusEvent(result.logs[0], "BonusAdded", bonus2.address, bonus2.amount);
 
             assert.equal(await bonuses.add.call(bonus3.address, bonus3.amount, { from: accounts[0] }), true);
             result = await bonuses.add(bonus3.address, bonus3.amount, { from: accounts[0] });
-            Utils.checkBonusEventGroup(result, "BonusAdded", bonus3.address, bonus3.amount);
+            Utils.checkBonusEvent(result.logs[0], "BonusAdded", bonus3.address, bonus3.amount);
+
+            var newRemaining = await bonuses.remainingTotalBonuses.call();
+            assert.equal(newRemaining.toNumber(), remaining.plus(bonus2.amount).plus(bonus3.amount).toNumber());
 		})
 
 		it ('fails to adds as owner when locked', async () => {
             await bonuses.lock({ from: accounts[0] });
             await Utils.expectThrow(bonuses.add(bonus4.address, bonus4.amount, { from: accounts[0] }));
-		})
-	})
-
-	describe('lock function', async () => {
-		before(async () => {
-	        contracts = await Utils.deployBonuses(artifacts, accounts);
-	        bonuses = contracts.bonuses;
-	        await bonuses.add(bonus2.address, bonus2.amount, { from: accounts[0] });
-	        await bonuses.add(bonus3.address, bonus3.amount, { from: accounts[0] });
-		})
-
-		it ('fails to lock as non-owner', async () => {
-            await Utils.expectThrow(bonuses.lock({ from: accounts[1] }));
-		})
-
-		it ('locks as owner', async () => {
-			var remaining = await bonuses.remainingTotalBonuses.call();
-			var status 	  = await bonuses.status.call();
-			assert.equal(remaining.toNumber(),  0);
-			assert.equal(status.toNumber(), 0);
-
-			var result = await bonuses.lock({ from: accounts[0] });
-
-			remaining = await bonuses.remainingTotalBonuses.call();
-			status 	  = await bonuses.status.call();
-			assert.equal(remaining.toNumber(), bonus2.amount.plus(bonus3.amount));
-			assert.equal(status.toNumber(), 1);
 		})
 	})
 
@@ -131,7 +106,7 @@ contract('Bonuses', function(accounts) {
 
 				var addressesPalette = _.range(1,9);
 
-				console.log(":: ADDING OVER 500 BONUSES ::");
+				console.log(":: ADDING BONUSES ::");
 
 				for (var i = 0; i < addressesPalette.length; i++) {
 					for(var t = 0; t < addressesPalette.length; t++) {
@@ -171,55 +146,59 @@ contract('Bonuses', function(accounts) {
 			})
 
 			it ('processes as owner when approved and allowed', async () => {
-				await token.approve(bonuses.address, ST1M.times(511), { from: accounts[1] });
+				console.log(":: PROCESSING BONUSES ::");
 
-				var result = null;
-				var log = null;
-				var from = 0;
-				var event = "BonusProcessed";
-				var bonus = null;
-				var index = null;
-				var balance = null;
-				var remaining = null;
+				var remaining = await bonuses.remainingTotalBonuses.call();
+				await token.approve(bonuses.address, remaining.toNumber(), { from: accounts[1] });
 
-				while (event == "BonusProcessed") {
-					result = await bonuses.process(from, { from: accounts[0] });
-					log = _.last(result.logs);
-					event = log.event
+				var simResult 	= null;
+				var result 		= null;
+				var log 		= null;
+				var from 		= 0;
+				var to 			= 0;
+				var event 		= "BonusProcessed";
+				var bonus 		= null;
+				var index 		= null;
+				var balance 	= null;
 
-					if (event == "BonusProcessed") {
-						index = log.args._index.toNumber();
-						from = index + 1;
+				while (to < (addresses.length - 1)) {
+					simResult = await bonuses.process.call(from, { from: accounts[0] });
+					result    = await bonuses.process(from, { from: accounts[0] });
 
-						assert.equal(log.args._address, addresses[index]);
+					for (var i = from; i <= to; i++) {
+						Utils.checkBonusEvent(result.logs[i - from], "BonusProcessed", addresses[from], ST1M);
+					}
 
-						// Confirm that the last processed bonus is marked processed
-						lastBonus = await bonuses.processables.call(addresses[index]);
-						assert.equal(lastBonus[1], true);
+					to = simResult.toNumber();
+					from = to + 1;
 
-						// Confirm that the next bonus to process is marked !processed
+					// Confirm that the last processed bonus is marked processed
+					lastBonus = await bonuses.processables.call(addresses[to]);
+					assert.equal(lastBonus[1], true);
+
+					// Confirm that the next bonus to process is marked !processed
+					if (from < addresses.length) {
 						nextBonus = await bonuses.processables.call(addresses[from]);
 						assert.equal(nextBonus[1], false);
-
-						totalTransferred = ST1M.times(from);
-
-						// Confirm that remainingTotalBonuses is correctly decreased
-						remaining = await bonuses.remainingTotalBonuses.call();
-						assert.equal(remaining.toNumber(), ST1M.times(511).sub(totalTransferred).toNumber());
-
-						// Confirm that SimpleToken.owner balance is correctly decreased
-						balance = await token.balanceOf.call(accounts[1]);
-						assert.equal(balance.toNumber(), totalSupply.sub(totalTransferred).toNumber());
 					}
-				}
 
-				assert.equal(event, "Completed");
+					totalTransferred = ST1M.times(from);
+
+					// Confirm that remainingTotalBonuses is correctly decreased
+					remaining = await bonuses.remainingTotalBonuses.call();
+					assert.equal(remaining.toNumber(), ST1M.times(511).sub(totalTransferred).toNumber());
+
+					// Confirm that SimpleToken.owner balance is correctly decreased
+					balance = await token.balanceOf.call(accounts[1]);
+					assert.equal(balance.toNumber(), totalSupply.sub(totalTransferred).toNumber());
+				}
+				assert.equal(_.last(result.logs).event, "Completed");
 
 				var status = await bonuses.status.call();
 				assert.equal(status.toNumber(), 3);			
 
 				// Confirm that final bonus is marked processed
-				lastBonus = await bonuses.processables.call(addresses[addresses.length - 1]);
+				lastBonus = await bonuses.processables.call(addresses[to]);
 				assert.equal(lastBonus[1], true);				
 
 				// Confirm that remainingTotalBonuses is 0
