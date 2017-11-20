@@ -1,7 +1,7 @@
 pragma solidity ^0.4.17;
 
 // ----------------------------------------------------------------------------
-// Processables
+// Bonuses
 //
 // Copyright (c) 2017 OpenST Ltd.
 // https://simpletoken.org/
