@@ -56,16 +56,14 @@ contract Bonuses is Processables {
 	function add(address _address, uint256 _amount)
 			public
 			onlyOwner
-			onlyIfUnlocked
 			returns(bool)
 	{
-		require(_address != address(0));
 		require(_amount > 0);
 
 		Processable storage processable = processables[_address];
 
 		require(processable.amount == 0);
-		require(add(_address));
+		require(addInternal(_address));
 
 		processable.amount = _amount;
 
@@ -94,7 +92,7 @@ contract Bonuses is Processables {
 
 	/// @dev Processes as many bonuses as possible from a certain index
 	/// @param _from from
-	/// @return true if processes last bonus, false if otherwise
+	/// @return to
 	function process(uint256 _from)
 			public
 			onlyOwner
@@ -102,8 +100,8 @@ contract Bonuses is Processables {
 			returns(uint256 to)
 	{
 		// Obtain allowance approved for this contract
-		address owner = simpleToken.owner();		
-		uint256 remainingAllowance = simpleToken.allowance(owner, address(this));
+		address stOwner = simpleToken.owner();
+		uint256 remainingAllowance = simpleToken.allowance(stOwner, address(this));
 		require(remainingAllowance > 0);
 
 		for(uint256 i = _from; i < addresses.length; i++) {
@@ -117,15 +115,16 @@ contract Bonuses is Processables {
 			// Skip if previously processed
 			if(processable.processed) continue;
 
-			require(simpleToken.transferFrom(owner, addresses[i], processable.amount));
+			require(simpleToken.transferFrom(stOwner, addresses[i], processable.amount));
 
 			remainingAllowance	  = remainingAllowance.sub(processable.amount);
 			processable.processed = true;
+			totalProcessed++;
 
 			BonusProcessed(addresses[i], processable.amount);
 		}
 
-		if(to == (addresses.length - 1)) complete();
+		if(totalProcessed == addresses.length) completeInternal();
 	}
 
 	/// @dev Returns remaining total bonuses amount to process

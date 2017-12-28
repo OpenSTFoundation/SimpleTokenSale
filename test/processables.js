@@ -1,7 +1,8 @@
 const Utils = require('./lib/utils.js')
 
-// Add
+// AddInternal
 // 		adds some addresses
+// 		fails to add when locked
 // Lock
 // 		fails to lock as non-owner
 // 		fails to lock as owner when unlocked with 0 addresses
@@ -11,7 +12,7 @@ const Utils = require('./lib/utils.js')
 // 		fails to approve when unlocked
 // 		approves when locked
 // 		fails to approve when approved
-// Complete
+// CompleteInternal
 // 		fails to complete when locked
 // 		completes when approved
 // 		fails to complete when completed
@@ -38,8 +39,8 @@ contract('Processables', function(accounts) {
 
     		// Add accounts[0], from accounts[0]
     		addresses.push(accounts[0])
-            assert.equal(await processables.addPublic.call(accounts[0], { from: accounts[0] }), true);
-            await processables.addPublic(accounts[0], { from: accounts[0] });
+            assert.equal(await processables.add.call(accounts[0], { from: accounts[0] }), true);
+            await processables.add(accounts[0], { from: accounts[0] });
             var resultAddresses = await processables.getAddresses();
             assert.equal(resultAddresses.toString(), addresses.toString());
             var size = await processables.getAddressesSize();
@@ -47,13 +48,18 @@ contract('Processables', function(accounts) {
 
     		// Add accounts[0] again, from accounts[1]
     		addresses.push(accounts[0])
-            assert.equal(await processables.addPublic.call(accounts[0], { from: accounts[1] }), true);
-            await processables.addPublic(accounts[0], { from: accounts[0] });
+            assert.equal(await processables.add.call(accounts[0], { from: accounts[1] }), true);
+            await processables.add(accounts[0], { from: accounts[0] });
             resultAddresses = await processables.getAddresses();
             assert.equal(resultAddresses.toString(), addresses.toString());
             size = await processables.getAddressesSize();
             assert.equal(size.toNumber(), 2);
     	})
+
+    	it ('fails to add when locked', async () => {
+    		await processables.lock({ from: accounts[0] });
+            await Utils.expectThrow(processables.add(accounts[2], { from: accounts[0] }));
+		})
     })
 
     describe('lock function', async () => {
@@ -74,7 +80,7 @@ contract('Processables', function(accounts) {
 			var status = await processables.status.call();
 			assert.equal(status.toNumber(), 0);
 			
-            await processables.addPublic(accounts[0], { from: accounts[0] });
+            await processables.add(accounts[0], { from: accounts[0] });
             const result = await processables.lock({ from: accounts[0] });
 
 			status = await processables.status.call();
@@ -91,7 +97,7 @@ contract('Processables', function(accounts) {
 		before(async () => {
 	        contracts = await Utils.deployProcessables(artifacts, accounts);
 	        processables = contracts.processables;
-            await processables.addPublic(accounts[0], { from: accounts[0] });	        
+            await processables.add(accounts[0], { from: accounts[0] });
 		})
 
 		it ('fails to approve when unlocked', async () => {
@@ -115,16 +121,16 @@ contract('Processables', function(accounts) {
 		})
     })
 
-    describe('complete function', async () => {
+    describe('completeInternal function', async () => {
 		before(async () => {
 	        contracts = await Utils.deployProcessables(artifacts, accounts);
 	        processables = contracts.processables;
-            await processables.addPublic(accounts[0], { from: accounts[0] });	        
+            await processables.add(accounts[0], { from: accounts[0] });
             await processables.lock({ from: accounts[0] });
 		})
 
 		it ('fails to complete when locked', async () => {
-            await Utils.expectThrow(processables.completePublic({ from: accounts[0] }));
+            await Utils.expectThrow(processables.complete({ from: accounts[0] }));
 		})
 
 		it ('completes when approved', async () => {
@@ -132,7 +138,7 @@ contract('Processables', function(accounts) {
 			var status = await processables.status.call();
 			assert.equal(status.toNumber(), 2);
 
-            const result = await processables.completePublic({ from: accounts[0] });
+            const result = await processables.complete({ from: accounts[0] });
 
 			status = await processables.status.call();
 			assert.equal(status.toNumber(), 3);
@@ -140,7 +146,7 @@ contract('Processables', function(accounts) {
 		})
 
 		it ('fails to complete when completed', async () => {
-            await Utils.expectThrow(processables.completePublic({ from: accounts[0] }));
+            await Utils.expectThrow(processables.complete({ from: accounts[0] }));
 		})
     })
 
@@ -148,7 +154,7 @@ contract('Processables', function(accounts) {
 		before(async () => {
 	        contracts = await Utils.deployProcessables(artifacts, accounts);
 	        processables = contracts.processables;
-            await processables.addPublic(accounts[0], { from: accounts[0] });	        
+            await processables.add(accounts[0], { from: accounts[0] });
 		})
 
 		it ('fails to disapprove when unlocked', async () => {
@@ -175,7 +181,7 @@ contract('Processables', function(accounts) {
 			before(async () => {
 		        contracts = await Utils.deployProcessables(artifacts, accounts);
 		        processables = contracts.processables;
-	            await processables.addPublic(accounts[0], { from: accounts[0] });	        
+	            await processables.add(accounts[0], { from: accounts[0] });
 				await processables.lock({ from: accounts[0] });
 				await processables.approve({ from: accounts[0] });
 			})
@@ -196,10 +202,10 @@ contract('Processables', function(accounts) {
 			before(async () => {
 		        contracts = await Utils.deployProcessables(artifacts, accounts);
 		        processables = contracts.processables;
-	            await processables.addPublic(accounts[0], { from: accounts[0] });	        
+	            await processables.add(accounts[0], { from: accounts[0] });
 				await processables.lock({ from: accounts[0] });
 				await processables.approve({ from: accounts[0] });
-				await processables.completePublic({ from: accounts[0] });
+				await processables.complete({ from: accounts[0] });
 			})
 
 			it ('fails to disapprove', async () => {

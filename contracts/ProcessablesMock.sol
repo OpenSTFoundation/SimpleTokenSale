@@ -20,11 +20,11 @@ contract ProcessablesMock is Processables {
 
 	/// @dev Public wrapper for addAddress
 	/// @param _address address
-	function addPublic(address _address)
+	function add(address _address)
 			public
 			returns (bool result)
 	{
-		result = add(_address);
+		result = addInternal(_address);
 		return result;
 	}
 
@@ -48,11 +48,11 @@ contract ProcessablesMock is Processables {
 	}
 
 	/// @dev Public wrapper for completeInternal
-	function completePublic()
+	function complete()
 			public
 			returns (bool result)
 	{
-		result = complete();
+		result = completeInternal();
 		return result;
 	}
 

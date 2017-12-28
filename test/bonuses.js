@@ -4,8 +4,7 @@ const BigNumber = require('bignumber.js')
 // Properties
 // Add
 // 		fails to add as non-owner
-// 		adds as owner when unlocked
-// 		fails to adds as owner when locked
+// 		adds as owner
 // Approve
 // 		fails to approve as non-STOwner
 // 		approves as STOwner
@@ -53,7 +52,7 @@ contract('Bonuses', function(accounts) {
             await Utils.expectThrow(bonuses.add(bonus2.address, bonus2.amount, { from: accounts[1] }));
 		})
 
-		it ('adds as owner when unlocked', async () => {
+		it ('adds as owner', async () => {
 			var remaining = await bonuses.remainingTotalBonuses.call();
 
             assert.equal(await bonuses.add.call(bonus2.address, bonus2.amount, { from: accounts[0] }), true);
@@ -66,11 +65,6 @@ contract('Bonuses', function(accounts) {
 
             var newRemaining = await bonuses.remainingTotalBonuses.call();
             assert.equal(newRemaining.toNumber(), remaining.plus(bonus2.amount).plus(bonus3.amount).toNumber());
-		})
-
-		it ('fails to adds as owner when locked', async () => {
-            await bonuses.lock({ from: accounts[0] });
-            await Utils.expectThrow(bonuses.add(bonus4.address, bonus4.amount, { from: accounts[0] }));
 		})
 	})
 

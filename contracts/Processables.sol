@@ -77,10 +77,12 @@ contract Processables {
 	/// @dev Adds address to addresses
 	/// @param _address address to add
 	/// @return true
-	function add(address _address)
+	function addInternal(address _address)
 			internal
+			onlyIfUnlocked
 			returns(bool result)
 	{
+		require(_address != address(0));
 		addresses.push(_address);
 
 		return true;
@@ -127,7 +129,7 @@ contract Processables {
 
 	/// @dev Sets status to Completed, to be called by inheriting contracts with access control
 	/// @return true
-	function complete()
+	function completeInternal()
 			internal
 			onlyIfApproved
 			returns(bool result)
