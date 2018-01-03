@@ -9,13 +9,12 @@ pragma solidity ^0.4.17;
 // The MIT Licence.
 // ----------------------------------------------------------------------------
 
+import "./Owned.sol";
+
 /// @title Processables
 /// @dev Abstract contract to be inherited by operations contracts that aid certain transfers related to the token sale
-contract Processables {
+contract Processables is Owned {
 	address[] public addresses;
-
-	// Address that creates and administers this contract
-	address public owner;
 
 	// Count of successful process iterations
 	uint256 public totalProcessed;
@@ -35,12 +34,6 @@ contract Processables {
 	event Approved();
 	event Completed();
 	event Disapproved();
-
-	// limits execution to owner
-	modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
 
 	// limits execution to when this contract is unlocked
 	modifier onlyIfUnlocked() {
@@ -69,10 +62,8 @@ contract Processables {
 
 	/// @dev Constructor
 	function Processables()
-			public
-	{
-		owner = msg.sender;
-	}
+			Owned()
+			public { }
 
 	/// @dev Adds address to addresses
 	/// @param _address address to add
