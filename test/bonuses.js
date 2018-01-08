@@ -11,7 +11,6 @@ const BigNumber = require('bignumber.js')
 // Process
 //		with completion
 // 			fails to process as non-owner
-// 			fails to process as owner when approved but not allowed
 // 			processes as owner when approved and allowed
 // 			fails to process as owner when completed
 //		with disapproval
@@ -24,11 +23,27 @@ contract('Bonuses', function(accounts) {
 	var bonuses = null;
 	var addresses = [];
 
-	const ST1M 	 	  = new BigNumber(web3.toWei(1000000, "ether"));
-	const totalSupply = new BigNumber(web3.toWei(800000000, "ether"));
-	const bonus2 	  = { address: accounts[2], amount: new BigNumber(web3.toWei(2, "ether")) };
-	const bonus3 	  = { address: accounts[3], amount: new BigNumber(web3.toWei(3, "ether")) };
-	const bonus4 	  = { address: accounts[4], amount: new BigNumber(web3.toWei(4, "ether")) };
+	var addressesPalette = _.range(1,9);
+
+	for (var i = 0; i < addressesPalette.length; i++) {
+		for(var t = 0; t < addressesPalette.length; t++) {
+			for(var e = 0; e < addressesPalette.length; e++) {
+				if (i == 0 && t == 0 && e == 0) continue;
+
+				var address = "0x" + i + t;
+				_.times(38, function() { address = address + e });
+				addresses.push(address);
+			}
+		}
+	}
+
+	var addresses = addresses.slice(0,200);
+	var amounts = _.range(0,200); // N.B.: 0 amount is not prohibited by Bonuses
+	var totalBonuses = 0;
+
+	for (var i = 0; i < amounts.length; i++) {
+		totalBonuses += amounts[i];
+	}
 
 	describe('properties', async () => {
 		before(async () => {
@@ -40,6 +55,10 @@ contract('Bonuses', function(accounts) {
 		it ('has simpleToken', async () => {
 			assert.equal(await bonuses.simpleToken.call(), token.address);
 		})
+
+		it ('has simpleToken owner', async () => {
+			assert.equal(await bonuses.stOwner.call(), await token.owner.call());
+		})
 	})
 
 	describe('add function', async () => {
@@ -49,22 +68,21 @@ contract('Bonuses', function(accounts) {
 		})
 
 		it ('fails to add as non-owner', async () => {
-            await Utils.expectThrow(bonuses.add(bonus2.address, bonus2.amount, { from: accounts[1] }));
+            await Utils.expectThrow(bonuses.add(addresses, amounts, { from: accounts[1] }));
 		})
 
 		it ('adds as owner', async () => {
-			var remaining = await bonuses.remainingTotalBonuses.call();
+			var totalAmounts = 0;
+            var simResult = await bonuses.add.call(addresses, amounts, { from: accounts[0] });
+            var result = await bonuses.add(addresses, amounts, { from: accounts[0] });
+            var lastIndex = simResult.toNumber();
 
-            assert.equal(await bonuses.add.call(bonus2.address, bonus2.amount, { from: accounts[0] }), true);
-            var result = await bonuses.add(bonus2.address, bonus2.amount, { from: accounts[0] });
-            Utils.checkBonusEvent(result.logs[0], "BonusAdded", bonus2.address, bonus2.amount);
+            for (var i = 0; i <= lastIndex; i++) {
+            	totalAmounts = totalAmounts + amounts[i];
+            }
 
-            assert.equal(await bonuses.add.call(bonus3.address, bonus3.amount, { from: accounts[0] }), true);
-            result = await bonuses.add(bonus3.address, bonus3.amount, { from: accounts[0] });
-            Utils.checkBonusEvent(result.logs[0], "BonusAdded", bonus3.address, bonus3.amount);
-
-            var newRemaining = await bonuses.remainingTotalBonuses.call();
-            assert.equal(newRemaining.toNumber(), remaining.plus(bonus2.amount).plus(bonus3.amount).toNumber());
+            assert.equal(await bonuses.getProcessablesSize.call(), lastIndex + 1);
+            assert.equal(await bonuses.remainingTotalBonuses.call(), totalAmounts);
 		})
 	})
 
@@ -72,7 +90,7 @@ contract('Bonuses', function(accounts) {
 		before(async () => {
 	        contracts = await Utils.deployBonuses(artifacts, accounts);
 	        bonuses = contracts.bonuses;
-	        await bonuses.add(bonus2.address, bonus2.amount, { from: accounts[0] });
+	        await bonuses.add(addresses, amounts, { from: accounts[0] });
 			await bonuses.lock({ from: accounts[0] });	        
 		})
 
@@ -97,23 +115,19 @@ contract('Bonuses', function(accounts) {
 		        contracts = await Utils.deployBonuses(artifacts, accounts);
 		        token = contracts.token;
 		        bonuses = contracts.bonuses;
+		        var total = 0;
+		        var addressesSlice = addresses;
+		        var amountsSlice = amounts;
+		        var totalBonuses = 0;
 
-				var addressesPalette = _.range(1,9);
+				while (total < addresses.length) {
+		            var simResult = await bonuses.add.call(addressesSlice, amountsSlice, { from: accounts[0] });
+		            var result = await bonuses.add(addressesSlice, amountsSlice, { from: accounts[0] });
+		            var from = simResult.toNumber() + 1;
+		            total = total + from;
 
-				console.log(":: ADDING BONUSES ::");
-
-				for (var i = 0; i < addressesPalette.length; i++) {
-					for(var t = 0; t < addressesPalette.length; t++) {
-						for(var e = 0; e < addressesPalette.length; e++) {
-							if (i == 0 && t == 0 && e == 0) continue;
-
-							var address = "0x" + i + t;
-							_.times(38, function() { address = address + e });
-
-					        await bonuses.add(address, ST1M, { from: accounts[0] });
-							addresses.push(address);
-						}
-					}
+		            addressesSlice = addressesSlice.slice(from);
+		            amountsSlice = amountsSlice.slice(from);
 				}
 
 				await bonuses.lock({ from: accounts[0] });
@@ -121,11 +135,11 @@ contract('Bonuses', function(accounts) {
 			})
 
 			it ('is setup to process bonuses', async () => {
-				var size = await bonuses.getAddressesSize.call();
-				assert.equal(size.toNumber(), 511);
+				var size = await bonuses.getProcessablesSize.call();
+				assert.equal(size.toNumber(), addresses.length);
 
 				var remaining = await bonuses.remainingTotalBonuses.call();
-				assert.equal(remaining.toNumber(), ST1M.times(511));
+				assert.equal(remaining.toNumber(), totalBonuses);
 
 				var status = await bonuses.status.call();
 				assert.equal(status.toNumber(), 2);			
@@ -135,73 +149,58 @@ contract('Bonuses', function(accounts) {
 	            await Utils.expectThrow(bonuses.process(0, { from: accounts[1] }));
 			})
 
-			it ('fails to process as owner when approved but not allowed', async () => {
-	            await Utils.expectThrow(bonuses.process(0, { from: accounts[0] }));
-			})
-
 			it ('processes as owner when approved and allowed', async () => {
-				console.log(":: PROCESSING BONUSES ::");
-
 				var remaining = await bonuses.remainingTotalBonuses.call();
 				await token.approve(bonuses.address, remaining.toNumber(), { from: accounts[1] });
 
-				var simResult 	= null;
-				var result 		= null;
-				var log 		= null;
-				var from 		= 0;
-				var to 			= 0;
-				var event 		= "BonusProcessed";
-				var bonus 		= null;
-				var index 		= null;
-				var balance 	= null;
+				var simResult 			= null;
+				var result 				= null;
+				var from 				= 0;
+				var to 					= 0;
+				var balance 			= null;
+				var totalTransferred 	= 0;
+				var totalSupply 		= new BigNumber(web3.toWei(800000000, "ether"));
 
 				while (to < (addresses.length - 1)) {
 					simResult = await bonuses.process.call(from, { from: accounts[0] });
 					result    = await bonuses.process(from, { from: accounts[0] });
 
+					to = simResult.toNumber();
+
 					for (var i = from; i <= to; i++) {
-						Utils.checkBonusEvent(result.logs[i - from], "BonusProcessed", addresses[from], ST1M);
+						totalTransferred += amounts[i];
+						Utils.checkBonusProcessedEvent(result.logs[i - from], addresses[i].toLowerCase(), amounts[i]);
 					}
 
-					to = simResult.toNumber();
 					from = to + 1;
 
 					// Confirm that the last processed bonus is marked processed
-					lastBonus = await bonuses.processables.call(addresses[to]);
-					assert.equal(lastBonus[1], true);
+					lastBonus = await bonuses.processables.call(to);
+					assert.equal(lastBonus[2], true);
 
 					// Confirm that the next bonus to process is marked !processed
 					if (from < addresses.length) {
-						nextBonus = await bonuses.processables.call(addresses[from]);
-						assert.equal(nextBonus[1], false);
+						nextBonus = await bonuses.processables.call(from);
+						assert.equal(nextBonus[2], false);
 					}
-
-					totalTransferred = ST1M.times(from);
 
 					// Confirm that remainingTotalBonuses is correctly decreased
 					remaining = await bonuses.remainingTotalBonuses.call();
-					assert.equal(remaining.toNumber(), ST1M.times(511).sub(totalTransferred).toNumber());
+					assert.equal(remaining.toNumber(), totalBonuses - totalTransferred);
 
 					// Confirm that SimpleToken.owner balance is correctly decreased
 					balance = await token.balanceOf.call(accounts[1]);
 					assert.equal(balance.toNumber(), totalSupply.sub(totalTransferred).toNumber());
 				}
+
 				assert.equal(_.last(result.logs).event, "Completed");
 
 				var status = await bonuses.status.call();
 				assert.equal(status.toNumber(), 3);			
 
-				// Confirm that final bonus is marked processed
-				lastBonus = await bonuses.processables.call(addresses[to]);
-				assert.equal(lastBonus[1], true);				
-
 				// Confirm that remainingTotalBonuses is 0
 				remaining = await bonuses.remainingTotalBonuses.call();
 				assert.equal(remaining.toNumber(), 0);
-
-				// Confirm that SimpleToken.owner balance is correctly decreased
-				balance = await token.balanceOf.call(accounts[1]);
-				assert.equal(balance.toNumber(), totalSupply.sub(ST1M.times(511)).toNumber());
 			})
 
 			it ('fails to process as owner when completed', async () => {
@@ -213,9 +212,11 @@ contract('Bonuses', function(accounts) {
 			before(async () => {
 		        contracts = await Utils.deployBonuses(artifacts, accounts);
 		        bonuses = contracts.bonuses;
-		        await bonuses.add(bonus2.address, bonus2.amount, { from: accounts[0] });
+		        await bonuses.add(addresses, amounts, { from: accounts[0] });
 				await bonuses.lock({ from: accounts[0] });
+				await token.approve(bonuses.address, totalBonuses, { from: accounts[1] });
 				await bonuses.approve({ from: accounts[1] });
+				await bonuses.disapprove({ from: accounts[1] });
 			})
 
 			it ('fails to process as owner', async () => {
@@ -228,7 +229,7 @@ contract('Bonuses', function(accounts) {
 		before(async () => {
 	        contracts = await Utils.deployBonuses(artifacts, accounts);
 	        bonuses = contracts.bonuses;
-	        await bonuses.add(bonus2.address, bonus2.amount, { from: accounts[0] });
+	        await bonuses.add(addresses, amounts, { from: accounts[0] });
 			await bonuses.lock({ from: accounts[0] });	        
 		})
 
