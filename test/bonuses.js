@@ -81,6 +81,7 @@ contract('Bonuses', function(accounts) {
             	totalAmounts = totalAmounts + amounts[i];
             }
 
+			Utils.checkBonusesAddedEvent(result.logs[0], lastIndex);
             assert.equal(await bonuses.getProcessablesSize.call(), lastIndex + 1);
             assert.equal(await bonuses.remainingTotalBonuses.call(), totalAmounts);
 		})

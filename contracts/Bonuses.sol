@@ -36,6 +36,7 @@ contract Bonuses is Processables {
 	SimpleToken public simpleToken;
 	address public stOwner;
 
+	event BonusesAdded(uint256 _lastIndex);
 	event BonusProcessed(address indexed _address, uint256 _amount);
 
 	// limits execution to SimpleToken.owner
@@ -68,6 +69,7 @@ contract Bonuses is Processables {
 			if (msg.gas < ADD_GAS_MINIMUM) break;
 		}
 
+		BonusesAdded(i);
 		return i;
 	}
 
