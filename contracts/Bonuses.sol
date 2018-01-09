@@ -19,19 +19,24 @@ contract Bonuses is Processables {
     using SafeMath for uint256;
 
 	// named "processables" to aid JS interaction with this and other contracts that inherit from Processables
-	mapping(address => Processable) public processables;
+	Processable[] public processables;
 
-	// Amount of gas sufficient to conduct a single process loop iteration and post-loop operations
+	// Gas sufficient to exit loop and complete function
+	uint256 public constant ADD_GAS_MINIMUM = 50000;
+
+	// Gas sufficient to exit loop and complete function
 	uint256 public constant PROCESS_GAS_MINIMUM = 100000;
 
 	struct Processable {
+		address addr;
 		uint256 amount;
 		bool processed;
 	}
 
 	SimpleToken public simpleToken;
+	address public stOwner;
 
-	event BonusAdded(address indexed _address, uint256 _amount);
+	event BonusesAdded(uint256 _lastIndex);
 	event BonusProcessed(address indexed _address, uint256 _amount);
 
 	// limits execution to SimpleToken.owner
@@ -47,27 +52,38 @@ contract Bonuses is Processables {
 	{
 		require(address(_simpleToken) != address(0));
 		simpleToken = _simpleToken;
+		stOwner = simpleToken.owner();
 	}
 
 	/// @dev Adds bonus information to processables
-	/// @param _address address
-	/// @param _amount amount
+	/// param _addresses addresses
+	/// param _amounts amounts
 	/// @return true
-	function add(address _address, uint256 _amount)
+	function add(address[] _addresses, uint[] _amounts)
 			public
 			onlyOwner
-			returns(bool)
+			returns(uint)
 	{
-		require(_amount > 0);
+		for (uint i = 0; i < _addresses.length; i++) {
+			processables.push(Processable({ addr: _addresses[i], amount: _amounts[i], processed: false }));
+			if (msg.gas < ADD_GAS_MINIMUM) break;
+		}
 
-		Processable storage processable = processables[_address];
+		BonusesAdded(i);
+		return i;
+	}
 
-		require(processable.amount == 0);
-		require(addInternal(_address));
+	function lock()
+			public
+			onlyOwner
+			onlyIfUnlocked
+			returns(bool result)
+	{
+		require(processables.length > 0);
 
-		processable.amount = _amount;
+		status = Status.Locked;
 
-		BonusAdded(_address, _amount);
+		Locked();
 
 		return true;
 	}
@@ -100,31 +116,28 @@ contract Bonuses is Processables {
 			returns(uint256 to)
 	{
 		// Obtain allowance approved for this contract
-		address stOwner = simpleToken.owner();
 		uint256 remainingAllowance = simpleToken.allowance(stOwner, address(this));
-		require(remainingAllowance > 0);
 
-		for(uint256 i = _from; i < addresses.length; i++) {
+		for(uint256 i = _from; i < processables.length; i++) {
 			// Break if there is not enough gas for another iteration and post-loop operations or insufficient allowance
 			if(msg.gas < PROCESS_GAS_MINIMUM ||
-			   remainingAllowance < processables[addresses[i]].amount) break;
+			   remainingAllowance < processables[i].amount) break;
 
 			to = i;
-			Processable storage processable = processables[addresses[i]];
 
 			// Skip if previously processed
-			if(processable.processed) continue;
+			if(processables[i].processed) continue;
 
-			require(simpleToken.transferFrom(stOwner, addresses[i], processable.amount));
+			require(simpleToken.transferFrom(stOwner, processables[i].addr, processables[i].amount));
 
-			remainingAllowance	  = remainingAllowance.sub(processable.amount);
-			processable.processed = true;
+			remainingAllowance = remainingAllowance.sub(processables[i].amount);
+			processables[i].processed = true;
 			totalProcessed++;
 
-			BonusProcessed(addresses[i], processable.amount);
+			BonusProcessed(processables[i].addr, processables[i].amount);
 		}
 
-		if(totalProcessed == addresses.length) completeInternal();
+		if(totalProcessed == processables.length) completeInternal();
 	}
 
 	/// @dev Returns remaining total bonuses amount to process
@@ -134,7 +147,11 @@ contract Bonuses is Processables {
 			view
 			returns(uint256 total)
 	{
-		for(uint256 i = 0; i < addresses.length; i++)
-			if(!processables[addresses[i]].processed) total = total.add(processables[addresses[i]].amount);
+		for(uint256 i = 0; i < processables.length; i++)
+			if(!processables[i].processed) total = total.add(processables[i].amount);
 	}
+
+	/// @dev Returns size of processables
+	/// @return size of processables
+	function getProcessablesSize() public view returns(uint256 size) { return processables.length; }
 }

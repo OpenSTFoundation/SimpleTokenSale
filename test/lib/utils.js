@@ -403,12 +403,22 @@ module.exports.checkGrantableAllocationGrantedEvent = (event, _grantee, _amount,
 }
 
 
-module.exports.checkBonusEvent = (event, eventName, _address, _amount) => {
+module.exports.checkBonusesAddedEvent = (event, _lastIndex) => {
+   if (Number.isInteger(_lastIndex)) {
+      _lastIndex = new BigNumber(_lastIndex)
+   }
+
+   assert.equal(event.event, "BonusesAdded")
+   assert.equal(event.args._lastIndex.toNumber(), _lastIndex.toNumber())
+}
+
+
+module.exports.checkBonusProcessedEvent = (event, _address, _amount) => {
    if (Number.isInteger(_amount)) {
       _amount = new BigNumber(_amount)
    }
 
-   assert.equal(event.event, eventName)
+   assert.equal(event.event, "BonusProcessed")
    assert.equal(event.args._address, _address)
    assert.equal(event.args._amount.toNumber(), _amount.toNumber())
 }
